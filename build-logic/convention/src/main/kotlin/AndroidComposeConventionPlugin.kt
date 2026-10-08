@@ -17,7 +17,7 @@ class AndroidComposeConventionPlugin : Plugin<Project> {
             add("implementation", platform(library("androidx-compose-bom")))
             add("implementation", library("androidx-compose-ui"))
             add("implementation", library("androidx-compose-ui-tooling-preview"))
-            add("implementation", library("androidx-compose-material3"))
+            add("implementation", library("androidx-compose-foundation"))
             add("debugImplementation", library("androidx-compose-ui-tooling"))
             add("androidTestImplementation", platform(library("androidx-compose-bom")))
             add("androidTestImplementation", library("androidx-compose-ui-test-junit4"))

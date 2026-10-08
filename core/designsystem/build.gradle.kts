@@ -6,3 +6,7 @@ plugins {
 android {
     namespace = "com.yangsooplus.bookshelf.core.designsystem"
 }
+
+dependencies {
+    api(libs.androidx.compose.material3)
+}
