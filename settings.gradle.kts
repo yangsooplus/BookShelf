@@ -1,4 +1,5 @@
 pluginManagement {
+    includeBuild("build-logic")
     repositories {
         google {
             content {
@@ -23,4 +24,13 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "BookShelf"
-include(":app")
+include(
+    ":app",
+    ":feature:book",
+    ":domain:book",
+    ":data:book",
+    ":data:datasource:network",
+    ":data:datasource:database",
+    ":core:mvi",
+    ":core:designsystem",
+)
