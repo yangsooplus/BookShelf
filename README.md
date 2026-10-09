@@ -55,3 +55,9 @@ feature는 외부 진입점만 공개하고 내부 구현은 `internal`로 제�
 | `bookshelf.android.compose` | Compose 설정과 공통 의존성 |
 | `bookshelf.android.hilt` | Hilt·KSP 설정 |
 | `bookshelf.android.feature` | Library·Compose·Hilt 설정과 MVI·designsystem 의존성 |
+
+## 디자인 시스템
+
+`:core:designsystem`은 Figma BSDS의 컬러·타이포·간격·모서리 토큰과 공통 Compose 컴포넌트를 제공한다. 기본 라이트 팔레트와 시스템 기본 폰트를 사용한다. 입력값과 선택 상태는 호출자가 관리하며, `BookCard` 등 도서 전용 UI는 `:feature:book`에서 구성한다.
+
+이번 디자인 시스템 작업에서는 AI로 Figma 구조·규격을 확인하고 Compose 테마·컴포넌트·Preview를 작성했다. 디자인 코드는 프로젝트의 Compose API로 변환했고, 도서 모델·카드는 공통 모듈에서 제외했다. 검증은 앱 debug 빌드, 모듈 lint 및 렌더 확인으로 수행했다.
