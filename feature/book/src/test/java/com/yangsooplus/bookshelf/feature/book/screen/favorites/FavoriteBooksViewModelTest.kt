@@ -10,9 +10,12 @@ import com.yangsooplus.bookshelf.domain.book.usecase.GetFavoriteMetaDataUseCase
 import com.yangsooplus.bookshelf.domain.book.usecase.SetFavoriteBookUseCase
 import com.yangsooplus.bookshelf.feature.book.screen.favorites.FavoriteBooksState.FavoriteBooksSort
 import java.time.LocalDate
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runCurrent
@@ -97,16 +100,42 @@ class FavoriteBooksViewModelTest {
         assertTrue(effects.single() is FavoriteBooksEffect.ShowMessage)
     }
 
+    @Test
+    fun `즐겨찾기 조회가 늦어질 때_가격 필터 변경 후 이전 조회가 실패하면_새 결과와 상태를 유지한다`() = runTest(context = dispatcher) {
+        val oldResponse = CompletableDeferred<List<Book>>()
+        repository.search = { request ->
+            if (request.maxPrice == null) {
+                withContext(context = NonCancellable) { oldResponse.await() }
+            } else {
+                listOf(book(id = "필터 결과"))
+            }
+        }
+        viewModel.intent(intent = FavoriteBooksIntent.Search(query = "기록"))
+        runCurrent()
+
+        viewModel.intent(intent = FavoriteBooksIntent.ApplyPriceFilter(minPrice = 0, maxPrice = 10_000))
+        runCurrent()
+        oldResponse.completeExceptionally(exception = IllegalStateException("이전 조회 실패"))
+        runCurrent()
+
+        assertEquals(listOf("필터 결과"), viewModel.state.value.books.map { it.id })
+        assertEquals(10_000, viewModel.state.value.maxPriceFilter)
+        assertEquals(FavoriteBooksState.FavoriteBooksStatus.Results, viewModel.state.value.status)
+    }
+
     private data class Request(val query: String, val sort: String, val minPrice: Int?, val maxPrice: Int?, val page: Int)
 
     private class FakeBookRepository : BookRepository {
         var books: List<Book> = emptyList()
+        var search: (suspend (Request) -> List<Book>)? = null
         var failSave = false
         var savedFavorite: Boolean? = null
         val requests = mutableListOf<Request>()
 
         override suspend fun getFavoriteBooks(query: String, sort: String, minPrice: Int?, maxPrice: Int?, page: Int, size: Int): List<Book> {
-            requests.add(element = Request(query = query, sort = sort, minPrice = minPrice, maxPrice = maxPrice, page = page))
+            val request = Request(query = query, sort = sort, minPrice = minPrice, maxPrice = maxPrice, page = page)
+            requests.add(element = request)
+            search?.let { return it(request) }
             if (books.isEmpty()) throw BookException.NoSearchResults()
             return books
         }

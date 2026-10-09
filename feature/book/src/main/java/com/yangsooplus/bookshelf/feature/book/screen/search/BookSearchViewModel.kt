@@ -11,6 +11,9 @@ import com.yangsooplus.bookshelf.feature.book.screen.search.BookSearchState.Book
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlin.coroutines.CoroutineContext
+import kotlin.coroutines.coroutineContext
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 
 @HiltViewModel
@@ -20,6 +23,8 @@ internal class BookSearchViewModel @Inject constructor(
 ) : BaseViewModel<BookSearchIntent, BookSearchState, BookSearchEffect, BookSearchReducer>(
     BookSearchState()
 ) {
+    private var booksJob: Job? = null
+
     override fun intent(intent: BookSearchIntent) {
         super.intent(intent = intent)
         viewModelScope.launch(context = internalExceptionHandler) {
@@ -64,6 +69,7 @@ internal class BookSearchViewModel @Inject constructor(
     }
 
     private suspend fun search(query: String, sort: BookSearchSort) {
+        booksJob?.cancel()
         val normalizedQuery = query.trim()
         if (normalizedQuery.isEmpty()) {
             emitReducer(reducer = BookSearchReducer.ResetSearchResults)
@@ -91,47 +97,51 @@ internal class BookSearchViewModel @Inject constructor(
         }
     }
 
-    private suspend fun getBooks(query: String, sort: BookSearchSort, page: Int) {
-        val result = getBooksUseCase(
-            args = GetBooksUseCase.Param(
-                query = query,
-                sort = when (sort) {
-                    BookSearchSort.Accuracy -> GetBooksUseCase.Param.Sort.ACCURACY
-                    BookSearchSort.PublishedDate -> GetBooksUseCase.Param.Sort.LATEST
-                },
-                page = page,
-            )
-        )
-
-        when (result) {
-            is GetBooksUseCase.Result.Success -> {
-                emitReducer(
-                    reducer = BookSearchReducer.UpdateBooks(books = result.books, page = page),
+    private fun getBooks(query: String, sort: BookSearchSort, page: Int) {
+        booksJob?.cancel()
+        booksJob = viewModelScope.launch(context = internalExceptionHandler) {
+            val result = getBooksUseCase(
+                args = GetBooksUseCase.Param(
+                    query = query,
+                    sort = when (sort) {
+                        BookSearchSort.Accuracy -> GetBooksUseCase.Param.Sort.ACCURACY
+                        BookSearchSort.PublishedDate -> GetBooksUseCase.Param.Sort.LATEST
+                    },
+                    page = page,
                 )
-            }
+            )
 
-            GetBooksUseCase.Result.NoSearchResults, GetBooksUseCase.Result.NoMoreBooks -> {
-                if (page == 1) {
-                    emitReducer(reducer = BookSearchReducer.ShowEmptyResults)
-                } else {
-                    emitReducer(reducer = BookSearchReducer.MarkEndOfResults)
+            coroutineContext.ensureActive()
+            when (result) {
+                is GetBooksUseCase.Result.Success -> {
+                    emitReducer(
+                        reducer = BookSearchReducer.UpdateBooks(books = result.books, page = page),
+                    )
                 }
-            }
 
-            GetBooksUseCase.Result.InvalidQuery -> {
-                emitReducer(reducer = BookSearchReducer.ResetSearchResults)
-            }
-
-            GetBooksUseCase.Result.InvalidPage -> {
-                if (page > 1) {
-                    emitReducer(reducer = BookSearchReducer.MarkEndOfResults)
-                } else {
-                    emitReducer(reducer = BookSearchReducer.ShowLoadError(isNextPage = false))
+                GetBooksUseCase.Result.NoSearchResults, GetBooksUseCase.Result.NoMoreBooks -> {
+                    if (page == 1) {
+                        emitReducer(reducer = BookSearchReducer.ShowEmptyResults)
+                    } else {
+                        emitReducer(reducer = BookSearchReducer.MarkEndOfResults)
+                    }
                 }
-            }
 
-            is GetBooksUseCase.Result.Fail -> {
-                emitReducer(reducer = BookSearchReducer.ShowLoadError(isNextPage = page > 1))
+                GetBooksUseCase.Result.InvalidQuery -> {
+                    emitReducer(reducer = BookSearchReducer.ResetSearchResults)
+                }
+
+                GetBooksUseCase.Result.InvalidPage -> {
+                    if (page > 1) {
+                        emitReducer(reducer = BookSearchReducer.MarkEndOfResults)
+                    } else {
+                        emitReducer(reducer = BookSearchReducer.ShowLoadError(isNextPage = false))
+                    }
+                }
+
+                is GetBooksUseCase.Result.Fail -> {
+                    emitReducer(reducer = BookSearchReducer.ShowLoadError(isNextPage = page > 1))
+                }
             }
         }
     }

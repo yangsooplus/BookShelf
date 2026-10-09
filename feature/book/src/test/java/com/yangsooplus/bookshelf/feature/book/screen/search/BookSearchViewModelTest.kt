@@ -12,7 +12,9 @@ import java.time.LocalDate
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runCurrent
@@ -137,6 +139,50 @@ class BookSearchViewModelTest {
 
         assertEquals(listOf("새 결과"), viewModel.state.value.books.map { it.id })
         assertEquals(1, viewModel.state.value.page)
+    }
+
+    @Test
+    fun `추가 페이지 조회가 늦어질 때_새 검색 후 이전 응답이 도착하면_새 검색 결과만 유지한다`() = runTest(context = dispatcher) {
+        val oldResponse = CompletableDeferred<List<Book>>()
+        repository.search = { query, page ->
+            when {
+                query == "새 검색" -> listOf(book(id = "새 결과"))
+                page == 1 -> listOf(book(id = "이전 첫 페이지"))
+                else -> withContext(context = NonCancellable) { oldResponse.await() }
+            }
+        }
+        viewModel.intent(intent = BookSearchIntent.Search(query = "이전 검색"))
+        runCurrent()
+        viewModel.intent(intent = BookSearchIntent.LoadMore)
+        runCurrent()
+
+        viewModel.intent(intent = BookSearchIntent.Search(query = "새 검색"))
+        runCurrent()
+        oldResponse.complete(value = listOf(book(id = "이전 추가 페이지")))
+        runCurrent()
+
+        assertEquals("새 검색", viewModel.state.value.searchedQuery)
+        assertEquals(listOf("새 결과"), viewModel.state.value.books.map { it.id })
+        assertEquals(1, viewModel.state.value.page)
+    }
+
+    @Test
+    fun `즐겨찾기 저장이 진행 중일 때_새 검색을 실행하면_저장은 취소되지 않고 성공 결과를 반영한다`() = runTest(context = dispatcher) {
+        val saveResponse = CompletableDeferred<Unit>()
+        repository.save = { saveResponse.await() }
+        repository.search = { _, _ -> listOf(book(id = "1")) }
+        viewModel.intent(intent = BookSearchIntent.Search(query = "이전 검색"))
+        runCurrent()
+        viewModel.intent(intent = BookSearchIntent.ToggleFavorite(book = book(id = "1")))
+        runCurrent()
+
+        viewModel.intent(intent = BookSearchIntent.Search(query = "새 검색"))
+        runCurrent()
+        saveResponse.complete(value = Unit)
+        runCurrent()
+
+        assertEquals("새 검색", viewModel.state.value.searchedQuery)
+        assertTrue(viewModel.state.value.books.single().isFavorite)
     }
 
     private class FakeBookRepository : BookRepository {

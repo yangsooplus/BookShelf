@@ -12,6 +12,9 @@ import com.yangsooplus.bookshelf.feature.book.screen.favorites.FavoriteBooksStat
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlin.coroutines.CoroutineContext
+import kotlin.coroutines.coroutineContext
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 
 @HiltViewModel
@@ -22,6 +25,8 @@ internal class FavoriteBooksViewModel @Inject constructor(
 ) : BaseViewModel<FavoriteBooksIntent, FavoriteBooksState, FavoriteBooksEffect, FavoriteBooksReducer>(
     initialState = FavoriteBooksState(),
 ) {
+    private var booksJob: Job? = null
+
     override fun intent(intent: FavoriteBooksIntent) {
         super.intent(intent = intent)
         viewModelScope.launch(context = internalExceptionHandler) {
@@ -80,26 +85,33 @@ internal class FavoriteBooksViewModel @Inject constructor(
         getBooks(page = state.page + 1)
     }
 
-    private suspend fun getBooks(page: Int) = withCurrentState { state ->
-        when (val result = getFavoriteBooksUseCase(args = GetFavoriteBooksUseCase.Param(
-            query = state.searchedQuery,
-            sort = when (state.sort) {
-                FavoriteBooksSort.TitleAscending -> GetFavoriteBooksUseCase.Param.Sort.ASC
-                FavoriteBooksSort.TitleDescending -> GetFavoriteBooksUseCase.Param.Sort.DESC
-            },
-            minPrice = state.minPriceFilter,
-            maxPrice = state.maxPriceFilter,
-            page = page,
-        ))) {
-            is GetFavoriteBooksUseCase.Result.Success -> emitReducer(
-                reducer = FavoriteBooksReducer.UpdateBooks(books = result.books, page = page),
-            )
-            GetFavoriteBooksUseCase.Result.NoSearchResults, GetFavoriteBooksUseCase.Result.NoMoreBooks -> {
-                if (page == 1) emitReducer(reducer = FavoriteBooksReducer.ShowEmptyResults)
-                else emitReducer(reducer = FavoriteBooksReducer.MarkEndOfResults)
+    private fun getBooks(page: Int) {
+        booksJob?.cancel()
+        booksJob = viewModelScope.launch(context = internalExceptionHandler) {
+            withCurrentState { state ->
+                val result = getFavoriteBooksUseCase(args = GetFavoriteBooksUseCase.Param(
+                    query = state.searchedQuery,
+                    sort = when (state.sort) {
+                        FavoriteBooksSort.TitleAscending -> GetFavoriteBooksUseCase.Param.Sort.ASC
+                        FavoriteBooksSort.TitleDescending -> GetFavoriteBooksUseCase.Param.Sort.DESC
+                    },
+                    minPrice = state.minPriceFilter,
+                    maxPrice = state.maxPriceFilter,
+                    page = page,
+                ))
+                coroutineContext.ensureActive()
+                when (result) {
+                    is GetFavoriteBooksUseCase.Result.Success -> emitReducer(
+                        reducer = FavoriteBooksReducer.UpdateBooks(books = result.books, page = page),
+                    )
+                    GetFavoriteBooksUseCase.Result.NoSearchResults, GetFavoriteBooksUseCase.Result.NoMoreBooks -> {
+                        if (page == 1) emitReducer(reducer = FavoriteBooksReducer.ShowEmptyResults)
+                        else emitReducer(reducer = FavoriteBooksReducer.MarkEndOfResults)
+                    }
+                    GetFavoriteBooksUseCase.Result.InvalidPage -> emitReducer(reducer = FavoriteBooksReducer.MarkEndOfResults)
+                    is GetFavoriteBooksUseCase.Result.Fail -> emitReducer(reducer = FavoriteBooksReducer.ShowLoadError(isNextPage = page > 1))
+                }
             }
-            GetFavoriteBooksUseCase.Result.InvalidPage -> emitReducer(reducer = FavoriteBooksReducer.MarkEndOfResults)
-            is GetFavoriteBooksUseCase.Result.Fail -> emitReducer(reducer = FavoriteBooksReducer.ShowLoadError(isNextPage = page > 1))
         }
     }
 
