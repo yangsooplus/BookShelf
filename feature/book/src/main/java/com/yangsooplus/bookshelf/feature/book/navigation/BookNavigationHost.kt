@@ -15,7 +15,7 @@ import com.yangsooplus.bookshelf.feature.book.layout.BookAdaptiveLayout
 import com.yangsooplus.bookshelf.feature.book.layout.currentBookLayoutInfo
 import com.yangsooplus.bookshelf.feature.book.screen.BookDetailScreen
 import com.yangsooplus.bookshelf.feature.book.screen.search.BookSearchScreen
-import com.yangsooplus.bookshelf.feature.book.screen.FavoriteBooksScreen
+import com.yangsooplus.bookshelf.feature.book.screen.favorites.FavoriteBooksScreen
 
 @OptIn(ExperimentalMaterial3AdaptiveApi::class)
 @Composable
@@ -49,7 +49,10 @@ private fun rememberBookNavEntries(navigation: BookNavigationState): List<NavEnt
             BookSearchScreen(onBookClick = navigation::openDetail)
         }
         entry<BookRoute.Favorites>(metadata = ListDetailSceneStrategy.listPane()) {
-            FavoriteBooksScreen(onBookClick = navigation::openDetail)
+            FavoriteBooksScreen(
+                onBookClick = navigation::openDetail,
+                onSearchClick = { navigation.selectTab(tab = BookTab.Search) },
+            )
         }
         entry<BookRoute.Detail>(metadata = ListDetailSceneStrategy.detailPane()) { route ->
             BookDetailScreen(book = route.book, onBack = navigation::goBack)
