@@ -33,8 +33,13 @@ internal class BookNavigationState(
     }
 
     fun openDetail(book: Book) {
-        if (currentStack.last() !is BookRoute.Detail) {
-            currentStack.add(BookRoute.Detail(book = book, source = selectedTab))
+        val selectedBookDetail = BookRoute.Detail(book = book, source = selectedTab)
+        val openedDetailRoute = currentStack.last() as? BookRoute.Detail
+        if (openedDetailRoute != null) {
+            if (openedDetailRoute.book.id == book.id) return
+            currentStack[currentStack.lastIndex] = selectedBookDetail
+        } else {
+            currentStack.add(selectedBookDetail)
         }
     }
 
