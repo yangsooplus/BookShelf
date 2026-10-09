@@ -87,6 +87,25 @@ class GetBooksUseCaseTest {
         coVerify(exactly = 0) { bookRepository.getBooks(any(), any(), any(), any()) }
     }
 
+    @Test
+    fun `페이지가 50일 때_도서를 조회하면_조회한 도서를 반환한다`() = runTest {
+        val books = listOf(fixture<Book>())
+        coEvery { bookRepository.getBooks("기록", "accuracy", 50, 20) } returns books
+
+        val result = SUT.invoke(param(page = 50))
+
+        assertThat(result).isEqualTo(GetBooksUseCase.Result.Success(books))
+        coVerify(exactly = 1) { bookRepository.getBooks("기록", "accuracy", 50, 20) }
+    }
+
+    @Test
+    fun `페이지가 50보다 클 때_도서를 조회하면_InvalidPage를 반환하고 조회하지 않는다`() = runTest {
+        val result = SUT.invoke(param(page = 51))
+
+        assertThat(result).isEqualTo(GetBooksUseCase.Result.InvalidPage)
+        coVerify(exactly = 0) { bookRepository.getBooks(any(), any(), any(), any()) }
+    }
+
     private fun param(query: String = "기록", page: Int = 1) =
         GetBooksUseCase.Param(query, GetBooksUseCase.Param.Sort.ACCURACY, page)
 }

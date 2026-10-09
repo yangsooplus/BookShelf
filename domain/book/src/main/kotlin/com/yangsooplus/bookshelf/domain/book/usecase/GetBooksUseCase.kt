@@ -12,7 +12,7 @@ class GetBooksUseCase @Inject constructor(
     override suspend fun invoke(args: Param): Result {
         val query = args.query.trim()
         if (query.isEmpty()) return Result.InvalidQuery
-        if (args.page < 1) return Result.InvalidPage
+        if (args.page !in 1..MAX_PAGE) return Result.InvalidPage
 
         return try {
             val books = bookRepository.getBooks(
@@ -56,5 +56,6 @@ class GetBooksUseCase @Inject constructor(
 
     private companion object {
         const val PAGE_SIZE = 20
+        const val MAX_PAGE = 50
     }
 }
