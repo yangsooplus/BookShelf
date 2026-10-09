@@ -13,8 +13,19 @@ ksp = "2.3.10"
 room = "2.8.4"
 coroutines = "1.9.0"
 okhttp = "4.12.0"
+junitJupiter = "5.13.3"
+mockk = "1.13.4"
+truth = "1.4.4"
+fixture = "1.2.0"
 
 [libraries]
+javax-inject = { module = "javax.inject:javax.inject", version = "1" }
+junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junitJupiter" }
+junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher", version = "1.13.3" }
+mockk = { module = "io.mockk:mockk", version.ref = "mockk" }
+truth = { module = "com.google.truth:truth", version.ref = "truth" }
+fixture = { module = "com.appmattus.fixture:fixture", version.ref = "fixture" }
+kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutines" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
