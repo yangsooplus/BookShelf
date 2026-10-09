@@ -1,6 +1,6 @@
-package com.yangsooplus.bookshelf.data.book.remote
+package com.yangsooplus.bookshelf.data.datasource.network.book
 
-import com.yangsooplus.bookshelf.data.book.remote.model.BookDocument
+import com.yangsooplus.bookshelf.data.datasource.network.book.model.BookDocument
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -43,7 +43,7 @@ class BookApiServiceTest {
     @Test
     fun `검색어와 기본 정렬 및 20개 페이지 크기를 전송한다`() = runBlocking {
         server.enqueue(MockResponse().setBody(EMPTY_RESPONSE))
-        val response = service.searchBooks("코틀린 & Android")
+        val response = service.searchBooks(query = "코틀린 & Android")
         val request = requireNotNull(server.takeRequest(1, TimeUnit.SECONDS))
         val url = requireNotNull(request.requestUrl)
         assertEquals("GET", request.method)
@@ -59,7 +59,7 @@ class BookApiServiceTest {
     @Test
     fun `발간일 정렬과 다음 페이지를 전송한다`() = runBlocking {
         server.enqueue(MockResponse().setBody(EMPTY_RESPONSE))
-        service.searchBooks("도서", "latest", 2, 20)
+        service.searchBooks(query = "도서", sort = "latest", page = 2, size = 20)
         val url = requireNotNull(server.takeRequest(1, TimeUnit.SECONDS)?.requestUrl)
         assertEquals("latest", url.queryParameter("sort"))
         assertEquals("2", url.queryParameter("page"))
@@ -68,7 +68,7 @@ class BookApiServiceTest {
     @Test
     fun `정상 응답과 빈 값 및 추가 필드를 원본 그대로 파싱한다`() = runBlocking {
         server.enqueue(MockResponse().setBody(BOOK_RESPONSE))
-        val response = service.searchBooks("도서")
+        val response = service.searchBooks(query = "도서")
         assertEquals(1, response.meta.totalCount)
         assertEquals(1, response.meta.pageableCount)
         assertFalse(response.meta.isEnd)
@@ -109,7 +109,7 @@ class BookApiServiceTest {
         val response = json.parseToJsonElement(BOOK_RESPONSE).jsonObject
         val partialResponse = JsonObject(response + ("documents" to JsonArray(listOf(document))))
         server.enqueue(MockResponse().setBody(partialResponse.toString()))
-        val book = service.searchBooks("도서").documents.single()
+        val book = service.searchBooks(query = "도서").documents.single()
         val decoded = Json.encodeToJsonElement(BookDocument.serializer(), book).jsonObject
         assertEquals(field, JsonNull, decoded.getValue(field))
     }
@@ -118,7 +118,7 @@ class BookApiServiceTest {
     fun `페이징 메타데이터가 누락되면 파싱 오류를 전달한다`() = runBlocking {
         server.enqueue(MockResponse().setBody("""{"documents":[]}"""))
         try {
-            service.searchBooks("도서")
+            service.searchBooks(query = "도서")
             fail("SerializationException expected")
         } catch (_: SerializationException) {
         }
@@ -128,7 +128,7 @@ class BookApiServiceTest {
     fun `HTTP 인증 실패는 빈 결과로 변환하지 않고 전달한다`() = runBlocking {
         server.enqueue(MockResponse().setResponseCode(401).setBody("{}"))
         try {
-            service.searchBooks("도서")
+            service.searchBooks(query = "도서")
             fail("HttpException expected")
         } catch (exception: HttpException) {
             assertEquals(401, exception.code())

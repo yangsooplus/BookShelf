@@ -1,10 +1,10 @@
-package com.yangsooplus.bookshelf.data.book.remote
+package com.yangsooplus.bookshelf.data.datasource.network.book
 
-import com.yangsooplus.bookshelf.data.book.remote.model.BookSearchResponse
+import com.yangsooplus.bookshelf.data.datasource.network.book.model.BookSearchResponse
 import retrofit2.http.GET
 import retrofit2.http.Query
 
-internal interface BookApiService {
+interface BookApiService {
     @GET("v3/search/book")
     suspend fun searchBooks(
         @Query("query") query: String,

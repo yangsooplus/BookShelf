@@ -10,7 +10,7 @@ class SetFavoriteBookUseCase @Inject constructor(
     override suspend fun invoke(args: Param): Result = runCatchingCancellable<Result>(
         onFailure = { Result.Fail(it) },
     ) {
-        bookRepository.setFavorite(args.book, args.isFavorite)
+        bookRepository.setFavorite(book = args.book, isFavorite = args.isFavorite)
         Result.Success
     }
 

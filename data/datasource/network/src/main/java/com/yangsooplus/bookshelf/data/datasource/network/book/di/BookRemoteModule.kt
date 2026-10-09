@@ -1,6 +1,6 @@
-package com.yangsooplus.bookshelf.data.book.di
+package com.yangsooplus.bookshelf.data.datasource.network.book.di
 
-import com.yangsooplus.bookshelf.data.book.remote.BookApiService
+import com.yangsooplus.bookshelf.data.datasource.network.book.BookApiService
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn

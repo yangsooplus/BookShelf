@@ -1,6 +1,7 @@
 import java.util.Properties
 
 plugins {
+    alias(libs.plugins.kotlin.serialization)
     id("bookshelf.android.library")
     id("bookshelf.android.hilt")
 }
@@ -24,9 +25,10 @@ android {
 
 dependencies {
     implementation(libs.okhttp)
-    api(libs.retrofit)
+    implementation(libs.retrofit)
     implementation(libs.retrofit.converter.kotlinx.serialization)
     implementation(libs.kotlinx.serialization.json)
+    testImplementation(libs.kotlinx.coroutines.core)
     testImplementation(libs.junit)
     testImplementation(libs.okhttp.mockwebserver)
 }
