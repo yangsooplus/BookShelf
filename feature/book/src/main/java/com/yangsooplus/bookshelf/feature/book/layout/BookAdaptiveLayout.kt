@@ -56,6 +56,7 @@ internal fun currentBookLayoutInfo(): BookLayoutInfo {
 @Composable
 internal fun BookAdaptiveLayout(
     useRail: Boolean,
+    showBottomNavigation: Boolean,
     selectedTab: BookTab,
     onSelectTab: (BookTab) -> Unit,
     modifier: Modifier = Modifier,
@@ -75,8 +76,14 @@ internal fun BookAdaptiveLayout(
             }
         } else {
             Column(modifier = Modifier.fillMaxSize()) {
-                content(Modifier.weight(1f))
-                BSBottomNavigation(navigationItems, selectedTab.ordinal, selectTab)
+                content(Modifier.weight(weight = 1f))
+                if (showBottomNavigation) {
+                    BSBottomNavigation(
+                        items = navigationItems,
+                        selectedIndex = selectedTab.ordinal,
+                        onSelect = selectTab,
+                    )
+                }
             }
         }
     }

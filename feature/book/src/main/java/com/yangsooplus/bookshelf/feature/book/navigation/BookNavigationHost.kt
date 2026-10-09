@@ -28,6 +28,7 @@ internal fun BookNavigationHost(navigation: BookNavigationState, modifier: Modif
 
     BookAdaptiveLayout(
         useRail = layoutInfo.useRail,
+        showBottomNavigation = navigation.currentStack.lastOrNull() !is BookRoute.Detail,
         selectedTab = navigation.selectedTab,
         onSelectTab = navigation::selectTab,
         modifier = modifier,
