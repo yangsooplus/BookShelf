@@ -11,13 +11,13 @@ class GetBooksUseCase @Inject constructor(
     override suspend fun invoke(args: Param): Result {
         val query = args.query.trim()
         if (query.isEmpty()) return Result.InvalidQuery
-        if (args.page !in 1..MAX_PAGE) return Result.InvalidPage
 
         return runCatchingCancellable<Result>(
             onFailure = { e ->
                 when (e) {
                     is BookException.NoSearchResults -> Result.NoSearchResults
                     is BookException.NoMoreBooks -> Result.NoMoreBooks
+                    is BookException.InvalidPage -> Result.InvalidPage
                     else -> Result.Fail(e)
                 }
             },
@@ -55,6 +55,5 @@ class GetBooksUseCase @Inject constructor(
 
     private companion object {
         const val PAGE_SIZE = 20
-        const val MAX_PAGE = 50
     }
 }

@@ -9,13 +9,12 @@ class GetFavoriteBooksUseCase @Inject constructor(
     private val bookRepository: BookRepository,
 ) : UseCase<GetFavoriteBooksUseCase.Param, GetFavoriteBooksUseCase.Result> {
     override suspend fun invoke(args: Param): Result {
-        if (args.page < 1) return Result.InvalidPage
-
         return runCatchingCancellable<Result>(
             onFailure = { e ->
                 when (e) {
                     is BookException.NoSearchResults -> Result.NoSearchResults
                     is BookException.NoMoreBooks -> Result.NoMoreBooks
+                    is BookException.InvalidPage -> Result.InvalidPage
                     else -> Result.Fail(e)
                 }
             },

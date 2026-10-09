@@ -12,5 +12,7 @@ dependencies {
     implementation(project(":data:datasource:network"))
     implementation(project(":data:datasource:database"))
     implementation(libs.kotlinx.coroutines.core)
+    testImplementation(libs.mockk)
+    testImplementation(libs.fixture)
     testImplementation(libs.junit)
 }
