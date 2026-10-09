@@ -17,9 +17,14 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
@@ -60,6 +65,23 @@ internal fun BookSearchContent(
     modifier: Modifier = Modifier,
     columns: Int? = null,
 ) {
+    val gridState = rememberLazyGridState()
+    val currentOnLoadMore by rememberUpdatedState(newValue = onLoadMore)
+
+    LaunchedEffect(key1 = status, key2 = pageStatus, key3 = books.size) {
+        if (status != BookSearchStatus.Results || pageStatus != BookSearchPageStatus.MoreAvailable) {
+            return@LaunchedEffect
+        }
+        snapshotFlow {
+            val layoutInfo = gridState.layoutInfo
+            val lastVisibleIndex = layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1
+            val isNearEnd = lastVisibleIndex >= layoutInfo.totalItemsCount - 4
+            layoutInfo.totalItemsCount > 0 && lastVisibleIndex >= 0 && isNearEnd
+        }.collect { isNearEnd ->
+            if (isNearEnd) currentOnLoadMore()
+        }
+    }
+
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -68,6 +90,7 @@ internal fun BookSearchContent(
         BookSearchTopBar()
 
         LazyVerticalGrid(
+            state = gridState,
             columns = columns?.let { GridCells.Fixed(count = it) } ?: GridCells.Adaptive(minSize = 300.dp),
             contentPadding = PaddingValues(all = 20.dp),
             horizontalArrangement = Arrangement.spacedBy(space = 12.dp),
@@ -152,7 +175,6 @@ internal fun BookSearchContent(
                     item(span = { GridItemSpan(currentLineSpan = maxLineSpan) }) {
                         BookSearchPagination(
                             status = pageStatus,
-                            onLoadMore = onLoadMore,
                         )
                     }
                 }
@@ -194,26 +216,11 @@ private fun BookSearchTopBar() {
 }
 
 @Composable
-private fun BookSearchPagination(status: BookSearchPageStatus, onLoadMore: () -> Unit) {
+private fun BookSearchPagination(status: BookSearchPageStatus) {
     when (status) {
-        BookSearchPageStatus.MoreAvailable -> BSButton(
-            label = "20개 더 보기",
-            onClick = onLoadMore,
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        BookSearchPageStatus.Loading -> Column(verticalArrangement = Arrangement.spacedBy(space = 8.dp)) {
-            BSButton(
-                label = "추가 20개 불러오는 중…",
-                onClick = {},
-                modifier = Modifier.fillMaxWidth(),
-                enabled = false,
-            )
-            SearchCaption(text = "추가 도서를 불러오는 중이에요. 기존 결과는 유지됩니다.")
-        }
-
+        BookSearchPageStatus.Loading -> SearchCaption(text = "추가 도서를 불러오는 중이에요…", centered = true)
         BookSearchPageStatus.End -> SearchCaption(text = "모든 검색 결과를 확인했어요", centered = true)
-        BookSearchPageStatus.Error -> Unit
+        BookSearchPageStatus.MoreAvailable, BookSearchPageStatus.Error -> Unit
     }
 }
 
@@ -260,7 +267,7 @@ private fun BookSearchTopBarPreview() = BSTheme {
 @Preview
 @Composable
 private fun BookSearchPaginationPreview() = BSTheme {
-    BookSearchPagination(status = BookSearchPageStatus.MoreAvailable, onLoadMore = {})
+    BookSearchPagination(status = BookSearchPageStatus.Loading)
 }
 
 @Preview
