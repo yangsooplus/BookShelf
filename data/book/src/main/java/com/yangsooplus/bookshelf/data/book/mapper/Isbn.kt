@@ -50,7 +50,7 @@ private fun String.toIsbn13(): String {
     }
 
     val body = "978" + take(9)
-    return body + isbn13CheckDigit(body)
+    return body + isbn13CheckDigit(body = body)
 }
 
 private fun String.validateIsbn13(): String {
@@ -60,7 +60,7 @@ private fun String.validateIsbn13(): String {
     if (!startsWith("978") && !startsWith("979")) {
         throw IllegalArgumentException("Invalid ISBN13 prefix")
     }
-    if (last().digitToInt() != isbn13CheckDigit(take(12))) {
+    if (last().digitToInt() != isbn13CheckDigit(body = take(12))) {
         throw IllegalArgumentException("Invalid ISBN13 check digit")
     }
     return this

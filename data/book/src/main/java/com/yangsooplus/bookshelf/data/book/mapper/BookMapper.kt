@@ -12,7 +12,7 @@ internal fun BookSearchResponse.toBooks(): List<Book> = documents.map { it.toBoo
 internal fun BookDocument.toBook(): Book {
     val originalIsbn = isbn.orEmpty()
     return Book(
-        id = normalizeIsbn13(originalIsbn),
+        id = normalizeIsbn13(isbn = originalIsbn),
         title = title.orEmpty(),
         contents = contents.orEmpty(),
         url = url.orEmpty(),

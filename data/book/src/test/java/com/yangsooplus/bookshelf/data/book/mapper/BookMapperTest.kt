@@ -23,7 +23,7 @@ class BookMapperTest {
             authors = listOf("저자1", "저자2"),
             publisher = "출판사",
             publishedDate = LocalDate.of(2026, 10, 9),
-            price = BookPrice(20000, 18000),
+            price = BookPrice(regularPrice = 20000, salePrice = 18000),
             thumbnailUrl = "https://example.com/cover.jpg",
             isbn = "0132350882 9780132350884",
             translators = listOf("번역자"),
@@ -51,7 +51,7 @@ class BookMapperTest {
 
         val prices = documents.map { it.toBook().price }
 
-        assertEquals(List(2) { BookPrice(20000, null) }, prices)
+        assertEquals(List(2) { BookPrice(regularPrice = 20000, salePrice = null) }, prices)
     }
 
     @Test
@@ -60,7 +60,7 @@ class BookMapperTest {
 
         val price = document.toBook().price
 
-        assertEquals(BookPrice(20000, 0), price)
+        assertEquals(BookPrice(regularPrice = 20000, salePrice = 0), price)
     }
 
     @Test
@@ -87,7 +87,7 @@ class BookMapperTest {
                 id = "9780132350884",
                 title = "", contents = "", url = "", authors = emptyList(), publisher = "",
                 publishedDate = LocalDate.MIN,
-                price = BookPrice(-1, null),
+                price = BookPrice(regularPrice = -1, salePrice = null),
                 thumbnailUrl = "",
                 isbn = "0132350882 9780132350884",
                 translators = emptyList(),
@@ -126,7 +126,7 @@ class BookMapperTest {
     @Test
     fun `검색 결과에 여러 도서가 있을 때_목록으로 변환하면_순서를 유지하고 각각 ID를 생성한다`() {
         val response = BookSearchResponse(
-            meta = BookSearchMeta(2, 2, true),
+            meta = BookSearchMeta(totalCount = 2, pageableCount = 2, isEnd = true),
             documents = listOf(document().copy(isbn = "0132350882"), document().copy(isbn = "080442957X")),
         )
 
@@ -137,7 +137,7 @@ class BookMapperTest {
 
     @Test
     fun `검색 결과가 비어 있을 때_목록으로 변환하면_빈 목록을 반환한다`() {
-        val response = BookSearchResponse(BookSearchMeta(0, 0, true), emptyList())
+        val response = BookSearchResponse(meta = BookSearchMeta(totalCount = 0, pageableCount = 0, isEnd = true), documents = emptyList())
 
         val books = response.toBooks()
 
@@ -146,7 +146,7 @@ class BookMapperTest {
 
     @Test
     fun `검색 결과에 잘못된 ISBN이 있을 때_목록으로 변환하면_도서를 조용히 제외하지 않고 오류를 전달한다`() {
-        val response = BookSearchResponse(BookSearchMeta(2, 2, true), listOf(document(), document().copy(isbn = "")))
+        val response = BookSearchResponse(meta = BookSearchMeta(totalCount = 2, pageableCount = 2, isEnd = true), documents = listOf(document(), document().copy(isbn = "")))
 
         assertThrows(IllegalArgumentException::class.java) { response.toBooks() }
     }

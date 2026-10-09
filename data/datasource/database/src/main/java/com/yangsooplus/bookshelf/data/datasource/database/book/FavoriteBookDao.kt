@@ -23,9 +23,9 @@ abstract class FavoriteBookDao {
         limit: Int,
         offset: Int,
     ): List<FavoriteBookEntity> = if (ascending) {
-        getFavoriteBooksAscending(query, minPrice, maxPrice, limit, offset)
+        getFavoriteBooksAscending(query = query, minPrice = minPrice, maxPrice = maxPrice, limit = limit, offset = offset)
     } else {
-        getFavoriteBooksDescending(query, minPrice, maxPrice, limit, offset)
+        getFavoriteBooksDescending(query = query, minPrice = minPrice, maxPrice = maxPrice, limit = limit, offset = offset)
     }
 
     @Query(FAVORITE_BOOKS_QUERY + " ORDER BY title ASC, id ASC LIMIT :limit OFFSET :offset")

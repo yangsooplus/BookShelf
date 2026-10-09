@@ -40,13 +40,13 @@ class SetFavoriteBookUseCaseTest {
     @Test
     fun `즐겨찾기 저장 또는 해제를 요청하면_요청한 상태를 전달하고 Success를 반환한다`() = runTest {
         val book = fixture<Book>()
-        coEvery { bookRepository.setFavorite(book, any()) } returns Unit
+        coEvery { bookRepository.setFavorite(book = book, isFavorite = any()) } returns Unit
 
         for (isFavorite in listOf(true, false)) {
-            val result = SUT.invoke(SetFavoriteBookUseCase.Param(book, isFavorite))
+            val result = SUT.invoke(args = SetFavoriteBookUseCase.Param(book = book, isFavorite = isFavorite))
 
             assertThat(result).isEqualTo(SetFavoriteBookUseCase.Result.Success)
-            coVerify(exactly = 1) { bookRepository.setFavorite(book, isFavorite) }
+            coVerify(exactly = 1) { bookRepository.setFavorite(book = book, isFavorite = isFavorite) }
         }
     }
 
@@ -54,20 +54,20 @@ class SetFavoriteBookUseCaseTest {
     fun `즐겨찾기 저장이 실패할 때_즐겨찾기를 저장하면_Fail을 반환한다`() = runTest {
         val book = fixture<Book>()
         val failure = IllegalStateException("Write failed")
-        coEvery { bookRepository.setFavorite(any(), any()) } throws failure
+        coEvery { bookRepository.setFavorite(book = any(), isFavorite = any()) } throws failure
 
-        val result = SUT.invoke(SetFavoriteBookUseCase.Param(book, true))
+        val result = SUT.invoke(args = SetFavoriteBookUseCase.Param(book = book, isFavorite = true))
 
-        assertThat(result).isEqualTo(SetFavoriteBookUseCase.Result.Fail(failure))
+        assertThat(result).isEqualTo(SetFavoriteBookUseCase.Result.Fail(cause = failure))
     }
 
     @Test
     fun `즐겨찾기 저장 중 취소되면_취소를 전파한다`() = runTest {
         val book = fixture<Book>()
         val cancellation = CancellationException("Cancelled")
-        coEvery { bookRepository.setFavorite(any(), any()) } throws cancellation
+        coEvery { bookRepository.setFavorite(book = any(), isFavorite = any()) } throws cancellation
 
-        val result = assertThrows<CancellationException> { SUT.invoke(SetFavoriteBookUseCase.Param(book, true)) }
+        val result = assertThrows<CancellationException> { SUT.invoke(args = SetFavoriteBookUseCase.Param(book = book, isFavorite = true)) }
 
         assertThat(result).isSameInstanceAs(cancellation)
     }
