@@ -2,12 +2,15 @@ package com.yangsooplus.bookshelf.domain.book.repository
 
 import com.yangsooplus.bookshelf.domain.book.exception.BookException
 import com.yangsooplus.bookshelf.domain.book.model.Book
+import com.yangsooplus.bookshelf.domain.book.model.FavoriteMetaData
 
 interface BookRepository {
     @Throws(BookException.NoSearchResults::class, BookException.NoMoreBooks::class, BookException.InvalidPage::class, BookException.InvalidArgument::class)
     suspend fun getBooks(query: String, sort: String, page: Int, size: Int): List<Book>
     @Throws(BookException.NoSearchResults::class, BookException.NoMoreBooks::class, BookException.InvalidPage::class, BookException.InvalidArgument::class)
     suspend fun getFavoriteBooks(query: String, sort: String, minPrice: Int?, maxPrice: Int?, page: Int, size: Int): List<Book>
+    suspend fun getFavoriteMetaData(): FavoriteMetaData
+
     suspend fun setFavorite(book: Book, isFavorite: Boolean)
 
 }

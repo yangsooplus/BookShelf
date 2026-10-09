@@ -8,6 +8,7 @@ import com.yangsooplus.bookshelf.data.datasource.database.book.FavoriteBookDao
 import com.yangsooplus.bookshelf.data.datasource.network.book.BookApiService
 import com.yangsooplus.bookshelf.domain.book.exception.BookException
 import com.yangsooplus.bookshelf.domain.book.model.Book
+import com.yangsooplus.bookshelf.domain.book.model.FavoriteMetaData
 import com.yangsooplus.bookshelf.domain.book.repository.BookRepository
 import javax.inject.Inject
 
@@ -79,6 +80,11 @@ internal class DefaultBookRepository @Inject constructor(
             throw BookException.NoMoreBooks()
         }
         return books.map { it.toBook() }
+    }
+
+    override suspend fun getFavoriteMetaData(): FavoriteMetaData {
+        val metaData = favoriteBookDao.getFavoriteMetaData()
+        return FavoriteMetaData(totalCount = metaData.totalCount, maxPrice = metaData.maxPrice)
     }
 
     override suspend fun setFavorite(book: Book, isFavorite: Boolean) {
