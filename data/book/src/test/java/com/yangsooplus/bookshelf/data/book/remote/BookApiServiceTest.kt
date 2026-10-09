@@ -1,5 +1,6 @@
 package com.yangsooplus.bookshelf.data.book.remote
 
+import com.yangsooplus.bookshelf.data.book.remote.model.BookDocument
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -87,30 +88,38 @@ class BookApiServiceTest {
     }
 
     @Test
-    fun `명세의 도서 필드가 누락되면 파싱 오류를 전달한다`() = runBlocking {
+    fun `도서 필드가 누락되면 기본값 없이 null로 파싱한다`() = runBlocking {
         val document = json.parseToJsonElement(BOOK_RESPONSE).jsonObject
             .getValue("documents").let { it as JsonArray }.first().jsonObject
         for (field in document.keys - "new_field") {
-            assertDocumentParsingFails(JsonObject(document - field))
+            assertDocumentFieldIsNull(JsonObject(document - field), field)
         }
     }
 
     @Test
-    fun `명세의 도서 필드가 null이면 파싱 오류를 전달한다`() = runBlocking {
+    fun `도서 필드가 null이면 그대로 파싱한다`() = runBlocking {
         val document = json.parseToJsonElement(BOOK_RESPONSE).jsonObject
             .getValue("documents").let { it as JsonArray }.first().jsonObject
         for (field in document.keys - "new_field") {
-            assertDocumentParsingFails(JsonObject(document + (field to JsonNull)))
+            assertDocumentFieldIsNull(JsonObject(document + (field to JsonNull)), field)
         }
     }
 
-    private suspend fun assertDocumentParsingFails(document: JsonObject) {
+    private suspend fun assertDocumentFieldIsNull(document: JsonObject, field: String) {
         val response = json.parseToJsonElement(BOOK_RESPONSE).jsonObject
-        val invalidResponse = JsonObject(response + ("documents" to JsonArray(listOf(document))))
-        server.enqueue(MockResponse().setBody(invalidResponse.toString()))
+        val partialResponse = JsonObject(response + ("documents" to JsonArray(listOf(document))))
+        server.enqueue(MockResponse().setBody(partialResponse.toString()))
+        val book = service.searchBooks("도서").documents.single()
+        val decoded = Json.encodeToJsonElement(BookDocument.serializer(), book).jsonObject
+        assertEquals(field, JsonNull, decoded.getValue(field))
+    }
+
+    @Test
+    fun `페이징 메타데이터가 누락되면 파싱 오류를 전달한다`() = runBlocking {
+        server.enqueue(MockResponse().setBody("""{"documents":[]}"""))
         try {
             service.searchBooks("도서")
-            fail("SerializationException expected for $document")
+            fail("SerializationException expected")
         } catch (_: SerializationException) {
         }
     }
@@ -127,7 +136,10 @@ class BookApiServiceTest {
     }
 
     private companion object {
-        val json = Json { ignoreUnknownKeys = true }
+        val json = Json {
+            ignoreUnknownKeys = true
+            explicitNulls = false
+        }
 
         val BOOK_RESPONSE = """
             {

@@ -28,6 +28,7 @@ internal object NetworkModule {
     @Singleton
     fun provideJson(): Json = Json {
         ignoreUnknownKeys = true
+        explicitNulls = false
     }
 
     @Provides
