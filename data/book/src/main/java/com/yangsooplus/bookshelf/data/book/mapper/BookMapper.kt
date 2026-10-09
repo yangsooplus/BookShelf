@@ -1,7 +1,7 @@
 package com.yangsooplus.bookshelf.data.book.mapper
 
-import com.yangsooplus.bookshelf.data.book.remote.model.BookDocument
-import com.yangsooplus.bookshelf.data.book.remote.model.BookSearchResponse
+import com.yangsooplus.bookshelf.data.datasource.network.book.model.BookDocument
+import com.yangsooplus.bookshelf.data.datasource.network.book.model.BookSearchResponse
 import com.yangsooplus.bookshelf.domain.book.model.Book
 import com.yangsooplus.bookshelf.domain.book.model.BookPrice
 import java.time.LocalDate

@@ -29,8 +29,8 @@ APK: `app/build/outputs/apk/debug/app-debug.apk`
 | `:app` | 앱 진입점, 최상위 내비게이션, Hilt 조립 |
 | `:feature:book` | 도서 화면, ViewModel, MVI 상태 |
 | `:domain:book` | 순수 Kotlin 모델, Repository 계약, UseCase |
-| `:data:book` | Repository 구현, Kakao API, 데이터 변환 |
-| `:data:datasource:network` | 공통 HTTP 클라이언트와 통신 설정 |
+| `:data:book` | Repository 구현, 원격·로컬 데이터 조합, 도메인 모델 변환 |
+| `:data:datasource:network` | HTTP 클라이언트·통신 설정, API Service·요청/응답 DTO |
 | `:data:datasource:database` | Room DB, Entity·DAO, 마이그레이션 |
 | `:core:mvi` | 공통 MVI 기반 계층 |
 | `:core:designsystem` | 테마와 공통 UI 컴포넌트 |
@@ -40,6 +40,8 @@ app → feature:book, data:book, core:designsystem
 feature:book → domain:book, core:mvi, core:designsystem
 data:book → domain:book, data:datasource:network, data:datasource:database
 ```
+
+datasource 모듈은 기술별 데이터 접근을 담당한다. network는 API·DTO, database는 Entity·DAO를 소유하고, `data:book`에서 도메인 모델로 변환한다. datasource는 domain에 의존하지 않는다.
 
 feature는 외부 진입점만 공개하고 내부 구현은 `internal`로 제한한다. domain은 Android에 의존하지 않으며, 데이터 구현은 app에서 Hilt로 연결한다.
 

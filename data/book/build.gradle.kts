@@ -1,5 +1,4 @@
 plugins {
-    alias(libs.plugins.kotlin.serialization)
     id("bookshelf.android.library")
     id("bookshelf.android.hilt")
 }
@@ -13,8 +12,5 @@ dependencies {
     implementation(project(":data:datasource:network"))
     implementation(project(":data:datasource:database"))
     implementation(libs.kotlinx.coroutines.core)
-    implementation(libs.kotlinx.serialization.json)
     testImplementation(libs.junit)
-    testImplementation(libs.okhttp.mockwebserver)
-    testImplementation(libs.retrofit.converter.kotlinx.serialization)
 }

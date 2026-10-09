@@ -1,6 +1,6 @@
-package com.yangsooplus.bookshelf.data.book.remote
+package com.yangsooplus.bookshelf.data.datasource.network.book
 
-import com.yangsooplus.bookshelf.data.book.remote.model.BookDocument
+import com.yangsooplus.bookshelf.data.datasource.network.book.model.BookDocument
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray

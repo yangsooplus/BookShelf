@@ -1,23 +1,23 @@
-package com.yangsooplus.bookshelf.data.book.remote.model
+package com.yangsooplus.bookshelf.data.datasource.network.book.model
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
-internal data class BookSearchResponse(
+data class BookSearchResponse(
     val meta: BookSearchMeta,
     val documents: List<BookDocument>,
 )
 
 @Serializable
-internal data class BookSearchMeta(
+data class BookSearchMeta(
     @SerialName("total_count") val totalCount: Int,
     @SerialName("pageable_count") val pageableCount: Int,
     @SerialName("is_end") val isEnd: Boolean,
 )
 
 @Serializable
-internal data class BookDocument(
+data class BookDocument(
     val title: String?,
     val contents: String?,
     val url: String?,
