@@ -9,7 +9,12 @@ Kakao 도서 검색과 로컬 즐겨찾기를 위한 Android 프로젝트.
 - compileSdk 37 / minSdk 26 / targetSdk 37
 - KSP 2.3.10 / Hilt 2.60.1 / Room 2.8.4
 
-`local.properties`에 Android SDK 경로를 설정한다.
+루트 `local.properties`에 Android SDK 경로와 Kakao REST API 키를 설정한다. 이 파일은 Git에서 제외한다.
+
+```properties
+sdk.dir=/path/to/Android/sdk
+KAKAO_REST_API_KEY=your-rest-api-key
+```
 
 ```sh
 ./gradlew assembleDebug
