@@ -1,6 +1,7 @@
 package com.yangsooplus.bookshelf.feature.book.navigation
 
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
+import androidx.compose.material3.adaptive.navigation.BackNavigationBehavior
 import androidx.compose.material3.adaptive.navigation3.ListDetailSceneStrategy
 import androidx.compose.material3.adaptive.navigation3.rememberListDetailSceneStrategy
 import androidx.compose.runtime.Composable
@@ -22,13 +23,20 @@ import com.yangsooplus.bookshelf.feature.book.screen.favorites.FavoriteBooksScre
 internal fun BookNavigationHost(navigation: BookNavigationState, modifier: Modifier = Modifier) {
     val layoutInfo = currentBookLayoutInfo()
     val entries = rememberBookNavEntries(navigation)
+    val isDetailOpen = navigation.currentStack.lastOrNull() is BookRoute.Detail
+    val supportsListAndDetail = layoutInfo.paneDirective.maxHorizontalPartitions > 1
+    val paneDirective = layoutInfo.paneDirective.copy(
+        maxHorizontalPartitions = if (isDetailOpen) layoutInfo.paneDirective.maxHorizontalPartitions else 1,
+    )
     val listDetailStrategy = rememberListDetailSceneStrategy<BookRoute>(
-        directive = layoutInfo.paneDirective,
+        shouldHandleSinglePaneLayout = supportsListAndDetail,
+        backNavigationBehavior = BackNavigationBehavior.PopLatest,
+        directive = paneDirective,
     )
 
     BookAdaptiveLayout(
         useRail = layoutInfo.useRail,
-        showBottomNavigation = navigation.currentStack.lastOrNull() !is BookRoute.Detail,
+        showBottomNavigation = !isDetailOpen,
         selectedTab = navigation.selectedTab,
         onSelectTab = navigation::selectTab,
         modifier = modifier,
