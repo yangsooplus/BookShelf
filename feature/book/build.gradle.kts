@@ -9,6 +9,8 @@ android {
 
 dependencies {
     implementation(project(":domain:book"))
+    implementation(libs.coil.compose)
+    implementation(libs.coil.network.okhttp)
     implementation(libs.androidx.navigation3.runtime)
     implementation(libs.androidx.navigation3.ui)
     implementation(libs.androidx.lifecycle.viewmodel.navigation3)

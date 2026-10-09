@@ -14,7 +14,7 @@ import androidx.navigation3.ui.NavDisplay
 import com.yangsooplus.bookshelf.feature.book.layout.BookAdaptiveLayout
 import com.yangsooplus.bookshelf.feature.book.layout.currentBookLayoutInfo
 import com.yangsooplus.bookshelf.feature.book.screen.BookDetailScreen
-import com.yangsooplus.bookshelf.feature.book.screen.BookSearchScreen
+import com.yangsooplus.bookshelf.feature.book.screen.search.BookSearchScreen
 import com.yangsooplus.bookshelf.feature.book.screen.FavoriteBooksScreen
 
 @OptIn(ExperimentalMaterial3AdaptiveApi::class)
