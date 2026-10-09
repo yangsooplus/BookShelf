@@ -4,7 +4,6 @@ import com.yangsooplus.bookshelf.domain.book.exception.BookException
 import com.yangsooplus.bookshelf.domain.book.model.Book
 import com.yangsooplus.bookshelf.domain.book.repository.BookRepository
 import javax.inject.Inject
-import kotlinx.coroutines.CancellationException
 
 class GetFavoriteBooksUseCase @Inject constructor(
     private val bookRepository: BookRepository,
@@ -12,7 +11,15 @@ class GetFavoriteBooksUseCase @Inject constructor(
     override suspend fun invoke(args: Param): Result {
         if (args.page < 1) return Result.InvalidPage
 
-        return try {
+        return runCatchingCancellable<Result>(
+            onFailure = { e ->
+                when (e) {
+                    is BookException.NoSearchResults -> Result.NoSearchResults
+                    is BookException.NoMoreBooks -> Result.NoMoreBooks
+                    else -> Result.Fail(e)
+                }
+            },
+        ) {
             val books = bookRepository.getFavoriteBooks(
                 query = args.query.trim(),
                 sort = args.sort.name.lowercase(),
@@ -23,14 +30,6 @@ class GetFavoriteBooksUseCase @Inject constructor(
             )
 
             Result.Success(books = books)
-        } catch (e: BookException.NoSearchResults) {
-            Result.NoSearchResults
-        } catch (e: BookException.NoMoreBooks) {
-            Result.NoMoreBooks
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            Result.Fail(e)
         }
     }
 
