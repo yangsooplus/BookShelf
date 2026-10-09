@@ -170,19 +170,6 @@ internal fun FavoriteBooksContent(
                 }
 
                 FavoriteBooksStatus.Results -> {
-                    if (pageStatus == FavoriteBooksPageStatus.Error) {
-                        item(span = { GridItemSpan(currentLineSpan = maxLineSpan) }) {
-                            Column(verticalArrangement = Arrangement.spacedBy(space = 12.dp)) {
-                                BSStatusBanner(message = "다음 페이지를 불러오지 못했어요", type = BSStatusBannerType.Retry)
-                                BSButton(
-                                    label = "다음 페이지 다시 시도",
-                                    onClick = onLoadMore,
-                                    modifier = Modifier.fillMaxWidth()
-                                )
-                                SearchCaption(text = "기존 결과는 유지됩니다.")
-                            }
-                        }
-                    }
                     items(items = books, key = { it.id }) { book ->
                         BookCard(
                             book = book,
@@ -196,6 +183,7 @@ internal fun FavoriteBooksContent(
                     item(span = { GridItemSpan(currentLineSpan = maxLineSpan) }) {
                         FavoriteBooksPagination(
                             status = pageStatus,
+                            onLoadMore = onLoadMore,
                         )
                     }
                 }
@@ -248,11 +236,16 @@ private fun FavoriteBooksTopBar() {
 }
 
 @Composable
-private fun FavoriteBooksPagination(status: FavoriteBooksPageStatus) {
+private fun FavoriteBooksPagination(status: FavoriteBooksPageStatus, onLoadMore: () -> Unit) {
     when (status) {
         FavoriteBooksPageStatus.Loading -> SearchCaption(text = "추가 도서를 불러오는 중이에요…", centered = true)
         FavoriteBooksPageStatus.End -> SearchCaption(text = "모든 즐겨찾기를 확인했어요", centered = true)
-        FavoriteBooksPageStatus.MoreAvailable, FavoriteBooksPageStatus.Error -> Unit
+        FavoriteBooksPageStatus.Error -> Column(verticalArrangement = Arrangement.spacedBy(space = 12.dp)) {
+            BSStatusBanner(message = "다음 페이지를 불러오지 못했어요", type = BSStatusBannerType.Retry)
+            BSButton(label = "다음 페이지 다시 시도", onClick = onLoadMore, modifier = Modifier.fillMaxWidth())
+            SearchCaption(text = "기존 결과는 유지됩니다.")
+        }
+        FavoriteBooksPageStatus.MoreAvailable -> Unit
     }
 }
 
@@ -310,7 +303,7 @@ private fun FavoriteBooksTopBarPreview() = BSTheme {
 @Preview
 @Composable
 private fun FavoriteBooksPaginationPreview() = BSTheme {
-    FavoriteBooksPagination(status = FavoriteBooksPageStatus.Loading)
+    FavoriteBooksPagination(status = FavoriteBooksPageStatus.Loading, onLoadMore = {})
 }
 
 @Preview

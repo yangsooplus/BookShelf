@@ -152,19 +152,6 @@ internal fun BookSearchContent(
                 }
 
                 BookSearchStatus.Results -> {
-                    if (pageStatus == BookSearchPageStatus.Error) {
-                        item(span = { GridItemSpan(currentLineSpan = maxLineSpan) }) {
-                            Column(verticalArrangement = Arrangement.spacedBy(space = 12.dp)) {
-                                BSStatusBanner(message = "다음 페이지를 불러오지 못했어요", type = BSStatusBannerType.Retry)
-                                BSButton(
-                                    label = "다음 페이지 다시 시도",
-                                    onClick = onLoadMore,
-                                    modifier = Modifier.fillMaxWidth()
-                                )
-                                SearchCaption(text = "기존 결과는 유지됩니다.")
-                            }
-                        }
-                    }
                     items(items = books, key = { it.id }) { book ->
                         BookCard(
                             book = book,
@@ -175,6 +162,7 @@ internal fun BookSearchContent(
                     item(span = { GridItemSpan(currentLineSpan = maxLineSpan) }) {
                         BookSearchPagination(
                             status = pageStatus,
+                            onLoadMore = onLoadMore,
                         )
                     }
                 }
@@ -216,11 +204,16 @@ private fun BookSearchTopBar() {
 }
 
 @Composable
-private fun BookSearchPagination(status: BookSearchPageStatus) {
+private fun BookSearchPagination(status: BookSearchPageStatus, onLoadMore: () -> Unit) {
     when (status) {
         BookSearchPageStatus.Loading -> SearchCaption(text = "추가 도서를 불러오는 중이에요…", centered = true)
         BookSearchPageStatus.End -> SearchCaption(text = "모든 검색 결과를 확인했어요", centered = true)
-        BookSearchPageStatus.MoreAvailable, BookSearchPageStatus.Error -> Unit
+        BookSearchPageStatus.Error -> Column(verticalArrangement = Arrangement.spacedBy(space = 12.dp)) {
+            BSStatusBanner(message = "다음 페이지를 불러오지 못했어요", type = BSStatusBannerType.Retry)
+            BSButton(label = "다음 페이지 다시 시도", onClick = onLoadMore, modifier = Modifier.fillMaxWidth())
+            SearchCaption(text = "기존 결과는 유지됩니다.")
+        }
+        BookSearchPageStatus.MoreAvailable -> Unit
     }
 }
 
@@ -267,7 +260,7 @@ private fun BookSearchTopBarPreview() = BSTheme {
 @Preview
 @Composable
 private fun BookSearchPaginationPreview() = BSTheme {
-    BookSearchPagination(status = BookSearchPageStatus.Loading)
+    BookSearchPagination(status = BookSearchPageStatus.Loading, onLoadMore = {})
 }
 
 @Preview
