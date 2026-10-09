@@ -33,9 +33,12 @@ import com.yangsooplus.bookshelf.core.designsystem.component.BSStateMessage
 import com.yangsooplus.bookshelf.core.designsystem.component.BSStatusBanner
 import com.yangsooplus.bookshelf.core.designsystem.component.BSStatusBannerType
 import com.yangsooplus.bookshelf.core.designsystem.theme.BSTheme
+import com.yangsooplus.bookshelf.domain.book.model.Book
 import com.yangsooplus.bookshelf.feature.book.component.BookCard
 import com.yangsooplus.bookshelf.feature.book.component.BookCardSkeleton
-import com.yangsooplus.bookshelf.domain.book.model.Book
+import com.yangsooplus.bookshelf.feature.book.screen.search.BookSearchState.BookSearchPageStatus
+import com.yangsooplus.bookshelf.feature.book.screen.search.BookSearchState.BookSearchSort
+import com.yangsooplus.bookshelf.feature.book.screen.search.BookSearchState.BookSearchStatus
 
 @Composable
 internal fun BookSearchContent(

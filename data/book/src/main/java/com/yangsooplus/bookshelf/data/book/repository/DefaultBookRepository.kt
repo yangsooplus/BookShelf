@@ -33,6 +33,9 @@ internal class DefaultBookRepository @Inject constructor(
             if (response.meta.totalCount == 0) throw BookException.NoSearchResults()
             throw BookException.NoMoreBooks()
         }
+        val isBeyondLastPage: Boolean = (page - 1) * size >= response.meta.pageableCount
+        if (page > 1 && isBeyondLastPage) throw BookException.NoMoreBooks()
+
         return response.documents.mapNotNull { document ->
             val id = try {
                 normalizeIsbn13(isbn = document.isbn.orEmpty())

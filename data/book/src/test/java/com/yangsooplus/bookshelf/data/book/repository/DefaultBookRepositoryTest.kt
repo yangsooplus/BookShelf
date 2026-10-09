@@ -69,7 +69,7 @@ class DefaultBookRepositoryTest {
     @Test
     fun `모든 응답 도서에 ISBN이 없을 때_도서를 조회하면_빈 목록을 반환한다`() = runBlocking<Unit> {
         val response = BookSearchResponse(
-            meta = BookSearchMeta(totalCount = 1, pageableCount = 1, isEnd = true),
+            meta = BookSearchMeta(totalCount = 21, pageableCount = 21, isEnd = true),
             documents = listOf(fixture<BookDocument>().copy(isbn = null)),
         )
         coEvery { api.searchBooks(query = "책", sort = "accuracy", page = 2, size = 20) } returns response
@@ -103,6 +103,22 @@ class DefaultBookRepositoryTest {
         expectFailure<BookException.NoMoreBooks> {
             repository.getBooks(query = "책", sort = "accuracy", page = 2, size = 20)
         }
+    }
+
+    @Test
+    fun `마지막 페이지를 넘겨 같은 도서가 응답될 때_다음 페이지를 조회하면_NoMoreBooks를 전달한다`() = runBlocking<Unit> {
+        val document = fixture<BookDocument>().copy(isbn = "1141114712 9791141114718")
+        val response = BookSearchResponse(
+            meta = BookSearchMeta(totalCount = 74, pageableCount = 74, isEnd = true),
+            documents = listOf(document),
+        )
+        coEvery { api.searchBooks(query = "블루록", sort = "accuracy", page = 5, size = 20) } returns response
+
+        expectFailure<BookException.NoMoreBooks> {
+            repository.getBooks(query = "블루록", sort = "accuracy", page = 5, size = 20)
+        }
+
+        coVerify(exactly = 0) { dao.isFavorite(id = any()) }
     }
 
     @Test
@@ -274,7 +290,7 @@ class DefaultBookRepositoryTest {
     @Test
     fun `카카오의 페이지와 조회 크기가 경계값일 때_도서를 조회하면_API에 요청을 전달한다`() = runBlocking {
         val document = fixture<BookDocument>().copy(isbn = "0132350882", datetime = "2026-10-09T00:00:00.000+09:00")
-        val response = BookSearchResponse(meta = BookSearchMeta(totalCount = 1000, pageableCount = 1000, isEnd = false), documents = listOf(document))
+        val response = BookSearchResponse(meta = BookSearchMeta(totalCount = 2500, pageableCount = 2500, isEnd = false), documents = listOf(document))
         coEvery { api.searchBooks(query = "책", sort = "accuracy", page = any(), size = any()) } returns response
         val requests = listOf(1 to 1, 1 to 50, 50 to 1, 50 to 50)
 

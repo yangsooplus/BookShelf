@@ -6,9 +6,10 @@ import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import java.util.concurrent.TimeUnit
 import javax.inject.Singleton
-import okhttp3.OkHttpClient
 import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.kotlinx.serialization.asConverterFactory
 
@@ -18,7 +19,15 @@ internal object NetworkModule {
     @Provides
     @Singleton
     fun provideOkHttpClient(): OkHttpClient = OkHttpClient.Builder()
-        .addInterceptor(KakaoAuthorizationInterceptor(BuildConfig.KAKAO_REST_API_KEY))
+        .addInterceptor(KakaoAuthorizationInterceptor(restApiKey = BuildConfig.KAKAO_REST_API_KEY))
+        .apply {
+            if (BuildConfig.DEBUG) {
+                addInterceptor(HttpLoggingInterceptor().apply {
+                    level = HttpLoggingInterceptor.Level.BODY
+                    redactHeader(name = "Authorization")
+                })
+            }
+        }
         .connectTimeout(10, TimeUnit.SECONDS)
         .readTimeout(10, TimeUnit.SECONDS)
         .callTimeout(30, TimeUnit.SECONDS)

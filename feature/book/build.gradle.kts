@@ -4,10 +4,15 @@ plugins {
 }
 
 android {
+    testOptions.unitTests.isReturnDefaultValues = true
     namespace = "com.yangsooplus.bookshelf.feature.book"
 }
 
 dependencies {
+    testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
+    implementation(libs.androidx.hilt.lifecycle.viewmodel.compose)
+    implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(project(":domain:book"))
     implementation(libs.coil.compose)
     implementation(libs.coil.network.okhttp)

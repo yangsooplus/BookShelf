@@ -12,8 +12,8 @@ package com.yangsooplus.bookshelf.data.book.mapper
  *
  * ISBN10은 마지막 체크 문자를 제거하고 978을 붙인 뒤 ISBN13 방식으로 체크 숫자를 다시 계산한다.
  * 앞의 12자리에 1과 3을 번갈아 곱한 합으로 (10 - 합 % 10) % 10을 계산한다.
- * ISBN13은 검증 후 그대로 사용하며, 두 번호가 함께 있으면 같은 ISBN13인지 확인한다.
- * 번호의 형식·체크 숫자가 잘못되거나 서로 다른 책을 가리키면 예외를 전달한다.
+ * ISBN13이 제공되면 검증 후 우선 사용하며, ISBN10만 제공될 때 변환한다.
+ * 번호의 형식·체크 숫자가 잘못되면 예외를 전달한다.
  */
 internal fun normalizeIsbn13(isbn: String): String {
     val numbers = isbn.trim().split(Regex("\\s+"))
@@ -21,16 +21,19 @@ internal fun normalizeIsbn13(isbn: String): String {
         throw IllegalArgumentException("Expected ISBN10, ISBN13, or both")
     }
 
-    val normalized = numbers.map { number ->
-        when (number.length) {
-            10 -> number.toIsbn13()
-            13 -> number.validateIsbn13()
-            else -> throw IllegalArgumentException("Expected 10 or 13 ISBN characters")
-        }
+    if (numbers.any { it.length != 10 && it.length != 13 }) {
+        throw IllegalArgumentException("Expected 10 or 13 ISBN characters")
+    }
+
+    val isbn13Numbers = numbers.filter { it.length == 13 }
+    val normalized = if (isbn13Numbers.isNotEmpty()) {
+        isbn13Numbers.map { it.validateIsbn13() }
+    } else {
+        numbers.map { it.toIsbn13() }
     }.distinct()
 
     if (normalized.size != 1) {
-        throw IllegalArgumentException("ISBN10 and ISBN13 identify different books")
+        throw IllegalArgumentException("Expected a single book identifier")
     }
     return normalized.single()
 }
