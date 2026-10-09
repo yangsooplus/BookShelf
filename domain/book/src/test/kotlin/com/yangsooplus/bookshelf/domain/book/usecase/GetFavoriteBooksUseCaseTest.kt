@@ -146,5 +146,14 @@ class GetFavoriteBooksUseCaseTest {
         assertThat(result).isEqualTo(GetFavoriteBooksUseCase.Result.Success(books = books))
     }
 
+    @Test
+    fun `Repository가 빈 목록을 반환할 때_즐겨찾기를 조회하면_NoSearchResults를 반환한다`() = runTest {
+        coEvery { bookRepository.getFavoriteBooks(query = any(), sort = any(), minPrice = any(), maxPrice = any(), page = any(), size = any()) } returns emptyList()
+
+        val result = SUT.invoke(args = param())
+
+        assertThat(result).isEqualTo(GetFavoriteBooksUseCase.Result.NoSearchResults)
+    }
+
     private fun param() = GetFavoriteBooksUseCase.Param(sort = GetFavoriteBooksUseCase.Param.Sort.ASC)
 }

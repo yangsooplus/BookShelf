@@ -29,7 +29,7 @@ class GetBooksUseCase @Inject constructor(
                 size = PAGE_SIZE
             )
 
-            Result.Success(books = books)
+            if (books.isEmpty()) Result.NoSearchResults else Result.Success(books = books)
         }
     }
 

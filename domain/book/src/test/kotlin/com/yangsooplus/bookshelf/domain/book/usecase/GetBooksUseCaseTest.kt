@@ -120,6 +120,15 @@ class GetBooksUseCaseTest {
         coVerify(exactly = 1) { bookRepository.getBooks(query = "기록", sort = "accuracy", page = 51, size = 20) }
     }
 
+    @Test
+    fun `Repository가 빈 목록을 반환할 때_도서를 조회하면_NoSearchResults를 반환한다`() = runTest {
+        coEvery { bookRepository.getBooks(query = any(), sort = any(), page = any(), size = any()) } returns emptyList()
+
+        val result = SUT.invoke(args = param())
+
+        assertThat(result).isEqualTo(GetBooksUseCase.Result.NoSearchResults)
+    }
+
     private fun param(query: String = "기록", page: Int = 1) =
         GetBooksUseCase.Param(query = query, sort = GetBooksUseCase.Param.Sort.ACCURACY, page = page)
 }
