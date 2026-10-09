@@ -19,8 +19,11 @@ truth = "1.4.4"
 fixture = "1.2.0"
 retrofit = "3.0.0"
 serialization = "1.9.0"
+navigation3 = "1.2.0"
 
 [libraries]
+androidx-navigation3-runtime = { module = "androidx.navigation3:navigation3-runtime", version.ref = "navigation3" }
+androidx-navigation3-ui = { module = "androidx.navigation3:navigation3-ui", version.ref = "navigation3" }
 javax-inject = { module = "javax.inject:javax.inject", version = "1" }
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junitJupiter" }
 junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher", version = "1.13.3" }
