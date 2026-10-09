@@ -1,7 +1,9 @@
-package com.yangsooplus.bookshelf.feature.book.screen.search
+package com.yangsooplus.bookshelf.feature.book.screen.search.component
 
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfoV2
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -17,20 +19,26 @@ import com.yangsooplus.bookshelf.core.designsystem.component.BSSelectionOption
 @Composable
 internal fun BookSearchSortPanel(
     sort: BookSearchSort,
-    useDialog: Boolean,
     onDismiss: () -> Unit,
     onApply: (BookSearchSort) -> Unit,
 ) {
-    var selectedSort by rememberSaveable(sort) { mutableStateOf(sort) }
+    val windowSize = currentWindowAdaptiveInfoV2().windowSizeClass
+    val useDialog = windowSize.isWidthAtLeastBreakpoint(widthDpBreakpoint = 600)
+    var selectedSort by rememberSaveable(sort) { mutableStateOf(value = sort) }
     val options: @Composable () -> Unit = {
         BookSearchSort.entries.forEach { option ->
-            BSSelectionOption(option.label, selectedSort == option, { selectedSort = option })
+            BSSelectionOption(
+                label = option.label,
+                selected = selectedSort == option,
+                onClick = { selectedSort = option },
+            )
         }
-        BSButton("적용", { onApply(selectedSort) }, Modifier.fillMaxWidth())
+        BSButton(label = "적용", onClick = { onApply(selectedSort) }, modifier = Modifier.fillMaxWidth())
     }
+
     if (useDialog) {
-        BSDialog("검색 결과 정렬", onDismiss, content = options)
+        BSDialog(title = "검색 결과 정렬", onDismissRequest = onDismiss, content = options)
     } else {
-        BSBottomSheet("검색 결과 정렬", onDismiss, content = options)
+        BSBottomSheet(title = "검색 결과 정렬", onDismissRequest = onDismiss, content = options)
     }
 }

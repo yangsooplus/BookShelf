@@ -35,12 +35,10 @@ import com.yangsooplus.bookshelf.core.designsystem.component.BSIcon
 import com.yangsooplus.bookshelf.core.designsystem.theme.BSTheme
 import com.yangsooplus.bookshelf.domain.book.model.Book
 import com.yangsooplus.bookshelf.domain.book.model.BookPrice
-import java.text.NumberFormat
+import com.yangsooplus.bookshelf.feature.book.util.formatAuthorPublisher
+import com.yangsooplus.bookshelf.feature.book.util.formatPublishedDate
+import com.yangsooplus.bookshelf.feature.book.util.formatPrice
 import java.time.LocalDate
-import java.time.format.DateTimeFormatter
-import java.util.Locale
-
-private val bookDateFormat = DateTimeFormatter.ofPattern("yyyy.MM.dd")
 
 @Composable
 internal fun BookCard(
@@ -49,25 +47,30 @@ internal fun BookCard(
     onFavoriteChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val shape = RoundedCornerShape(12.dp)
+    val shape = RoundedCornerShape(size = 12.dp)
     Row(
         modifier = modifier
             .fillMaxWidth()
             .heightIn(min = 168.dp)
-            .clip(shape)
-            .background(BSTheme.colors.backgroundPrimary)
-            .border(1.dp, BSTheme.colors.borderPrimary, shape)
+            .clip(shape = shape)
+            .background(color = BSTheme.colors.backgroundPrimary)
+            .border(width = 1.dp, color = BSTheme.colors.borderPrimary, shape = shape)
             .clickable(role = Role.Button, onClick = onClick)
-            .padding(16.dp),
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
+            .padding(all = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(space = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        BookCover(book.thumbnailUrl)
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Box(Modifier.fillMaxWidth()) {
+
+        BookCover(thumbnailUrl = book.thumbnailUrl)
+
+        Column(
+            modifier = Modifier.weight(weight = 1f),
+            verticalArrangement = Arrangement.spacedBy(space = 4.dp),
+        ) {
+            Box(modifier = Modifier.fillMaxWidth()) {
                 BasicText(
-                    book.title,
-                    Modifier
+                    text = book.title,
+                    modifier = Modifier
                         .fillMaxWidth()
                         .align(Alignment.CenterStart)
                         .padding(end = 56.dp),
@@ -75,39 +78,33 @@ internal fun BookCard(
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
-                Box(Modifier.matchParentSize()) {
+                Box(modifier = Modifier.matchParentSize()) {
                     BSFavoriteButton(
                         checked = book.isFavorite,
                         onCheckedChange = onFavoriteChange,
                         modifier = Modifier
                             .align(Alignment.CenterEnd)
-                            .requiredSize(48.dp),
+                            .requiredSize(size = 48.dp),
                     )
                 }
             }
             BasicText(
-                "${
-                    book.authors.joinToString(", ").ifBlank { "저자 미상" }
-                } · ${book.publisher.ifBlank { "출판사 미상" }}",
+                text = book.formatAuthorPublisher(),
                 style = BSTheme.typography.bodySmall.copy(color = BSTheme.colors.supportNormal),
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(space = 8.dp)) {
                 BasicText(
-                    if (book.publishedDate == LocalDate.MIN) "출간일 미상"
-                    else book.publishedDate.format(bookDateFormat),
-                    Modifier.width(76.dp),
+                    text = book.formatPublishedDate(),
+                    modifier = Modifier.width(width = 76.dp),
                     style = BSTheme.typography.captionLarge.copy(color = BSTheme.colors.supportNormal),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                val price = book.price.representPrice
                 BasicText(
-                    if (price < 0) "가격 정보 없음" else "${
-                        NumberFormat.getIntegerInstance(Locale.KOREA).format(price)
-                    }원",
-                    Modifier.weight(1f),
+                    text = book.formatPrice(),
+                    modifier = Modifier.weight(weight = 1f),
                     style = BSTheme.typography.ui16.copy(
                         color = BSTheme.colors.contentPrimary,
                         textAlign = TextAlign.End,
@@ -122,19 +119,19 @@ internal fun BookCard(
 
 @Composable
 private fun BookCover(thumbnailUrl: String) {
-    var imageLoaded by remember(thumbnailUrl) { mutableStateOf(false) }
+    var imageLoaded by remember(key1 = thumbnailUrl) { mutableStateOf(value = false) }
     Box(
-        Modifier
-            .size(80.dp, 112.dp)
-            .clip(RoundedCornerShape(4.dp))
-            .background(BSTheme.colors.backgroundInputNormal),
+        modifier = Modifier
+            .size(width = 80.dp, height = 112.dp)
+            .clip(shape = RoundedCornerShape(size = 4.dp))
+            .background(color = BSTheme.colors.backgroundInputNormal),
         contentAlignment = Alignment.Center,
     ) {
         if (!imageLoaded) {
             BSIcon(
-                BSIcon.Image,
-                "표지 이미지 없음",
-                Modifier.size(32.dp),
+                icon = BSIcon.Image,
+                contentDescription = "표지 이미지 없음",
+                modifier = Modifier.size(size = 32.dp),
                 tint = BSTheme.colors.contentSecondary
             )
         }
@@ -158,17 +155,20 @@ internal fun BookCardSkeleton(modifier: Modifier = Modifier) {
         modifier = modifier
             .fillMaxWidth()
             .heightIn(min = 168.dp)
-            .background(BSTheme.colors.backgroundPrimary, RoundedCornerShape(12.dp))
-            .padding(16.dp),
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
+            .background(color = BSTheme.colors.backgroundPrimary, shape = RoundedCornerShape(size = 12.dp))
+            .padding(all = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(space = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        SkeletonBlock(Modifier.size(80.dp, 112.dp))
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            SkeletonBlock(Modifier.size(176.dp, 20.dp))
-            SkeletonBlock(Modifier.size(124.dp, 12.dp))
-            SkeletonBlock(Modifier.size(92.dp, 12.dp))
-            SkeletonBlock(Modifier.size(80.dp, 20.dp))
+        SkeletonBlock(modifier = Modifier.size(width = 80.dp, height = 112.dp))
+        Column(
+            modifier = Modifier.weight(weight = 1f),
+            verticalArrangement = Arrangement.spacedBy(space = 12.dp),
+        ) {
+            SkeletonBlock(modifier = Modifier.size(width = 176.dp, height = 20.dp))
+            SkeletonBlock(modifier = Modifier.size(width = 124.dp, height = 12.dp))
+            SkeletonBlock(modifier = Modifier.size(width = 92.dp, height = 12.dp))
+            SkeletonBlock(modifier = Modifier.size(width = 80.dp, height = 20.dp))
         }
     }
 }
@@ -177,8 +177,8 @@ internal fun BookCardSkeleton(modifier: Modifier = Modifier) {
 private fun SkeletonBlock(modifier: Modifier) {
     Box(
         modifier = modifier.background(
-            BSTheme.colors.backgroundInputNormal,
-            RoundedCornerShape(4.dp)
+            color = BSTheme.colors.backgroundInputNormal,
+            shape = RoundedCornerShape(size = 4.dp)
         )
     )
 }
@@ -195,7 +195,7 @@ private fun BookCardPreview() = BSTheme {
             authors = listOf("김서윤"),
             publisher = "문장숲",
             publishedDate = LocalDate.of(2026, 9, 1),
-            price = BookPrice(16_000, 14_400),
+            price = BookPrice(regularPrice = 16_000, salePrice = 14_400),
             thumbnailUrl = "",
             isbn = "9780000000001",
             translators = emptyList(),
