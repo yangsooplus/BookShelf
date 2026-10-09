@@ -5,6 +5,9 @@ plugins {
 
 android {
     namespace = "com.yangsooplus.bookshelf.data.book"
+    buildFeatures {
+        buildConfig = true
+    }
 }
 
 dependencies {

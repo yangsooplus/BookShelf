@@ -1,5 +1,10 @@
 package com.yangsooplus.bookshelf.data.book.repository
 
+import android.util.Log
+import io.mockk.every
+import io.mockk.mockkStatic
+import io.mockk.unmockkStatic
+
 import com.appmattus.kotlinfixture.kotlinFixture
 import com.yangsooplus.bookshelf.data.book.mapper.toBook
 import com.yangsooplus.bookshelf.data.book.mapper.toFavoriteBookEntity
@@ -37,6 +42,45 @@ class DefaultBookRepositoryTest {
 
         assertEquals(listOf(document.toBook()), books)
         assertEquals("9780132350884", books.single().id)
+    }
+
+    @Test
+    fun `ISBN이 없는 도서가 함께 응답될 때_도서를 조회하면_정상 도서를 반환한다`() = runBlocking {
+        val valid = fixture<BookDocument>().copy(isbn = "0132350882", datetime = "2026-10-09T00:00:00.000+09:00")
+        val response = BookSearchResponse(
+            meta = BookSearchMeta(totalCount = 2, pageableCount = 2, isEnd = true),
+            documents = listOf(valid.copy(isbn = null), valid),
+        )
+        coEvery { api.searchBooks(query = "책", sort = "accuracy", page = 1, size = 20) } returns response
+        mockkStatic(Log::class)
+        every { Log.d(any(), any()) } returns 0
+
+        try {
+            val books = repository.getBooks(query = "책", sort = "accuracy", page = 1, size = 20)
+
+            assertEquals(listOf(valid.toBook()), books)
+        } finally {
+            unmockkStatic(Log::class)
+        }
+    }
+
+    @Test
+    fun `모든 응답 도서에 ISBN이 없을 때_도서를 조회하면_빈 목록을 반환한다`() = runBlocking<Unit> {
+        val response = BookSearchResponse(
+            meta = BookSearchMeta(totalCount = 1, pageableCount = 1, isEnd = true),
+            documents = listOf(fixture<BookDocument>().copy(isbn = null)),
+        )
+        coEvery { api.searchBooks(query = "책", sort = "accuracy", page = 2, size = 20) } returns response
+        mockkStatic(Log::class)
+        every { Log.d(any(), any()) } returns 0
+
+        try {
+            val books = repository.getBooks(query = "책", sort = "accuracy", page = 2, size = 20)
+
+            assertEquals(emptyList<Book>(), books)
+        } finally {
+            unmockkStatic(Log::class)
+        }
     }
 
     @Test

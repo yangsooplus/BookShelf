@@ -1,5 +1,6 @@
 package com.yangsooplus.bookshelf.data.book.mapper
 
+import android.util.Log
 import com.yangsooplus.bookshelf.data.datasource.network.book.model.BookDocument
 import com.yangsooplus.bookshelf.data.datasource.network.book.model.BookSearchMeta
 import com.yangsooplus.bookshelf.data.datasource.network.book.model.BookSearchResponse
@@ -7,11 +8,28 @@ import com.yangsooplus.bookshelf.domain.book.model.Book
 import com.yangsooplus.bookshelf.domain.book.model.BookPrice
 import java.time.LocalDate
 import java.time.format.DateTimeParseException
+import io.mockk.every
+import io.mockk.mockkStatic
+import io.mockk.unmockkStatic
+import io.mockk.verify
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
+import org.junit.Before
 import org.junit.Test
 
 class BookMapperTest {
+    @Before
+    fun setUp() {
+        mockkStatic(Log::class)
+        every { Log.d(any(), any()) } returns 0
+    }
+
+    @After
+    fun tearDown() {
+        unmockkStatic(Log::class)
+    }
+
     @Test
     fun `검색 응답에 도서 정보가 있을 때_Book으로 변환하면_ID를 생성하고 원문 정보를 보존한다`() {
         val document = document()
@@ -145,10 +163,39 @@ class BookMapperTest {
     }
 
     @Test
-    fun `검색 결과에 잘못된 ISBN이 있을 때_목록으로 변환하면_도서를 조용히 제외하지 않고 오류를 전달한다`() {
-        val response = BookSearchResponse(meta = BookSearchMeta(totalCount = 2, pageableCount = 2, isEnd = true), documents = listOf(document(), document().copy(isbn = "")))
+    fun `정상 도서와 ISBN이 없거나 잘못된 도서가 섞여 있을 때_목록으로 변환하면_정상 도서만 순서대로 반환한다`() {
+        val first = document()
+        val last = document().copy(isbn = "080442957X")
+        val response = BookSearchResponse(
+            meta = BookSearchMeta(totalCount = 7, pageableCount = 7, isEnd = true),
+            documents = listOf(
+                first,
+                document().copy(isbn = null),
+                document().copy(isbn = ""),
+                document().copy(isbn = "   "),
+                document().copy(isbn = "9780132350885"),
+                document().copy(isbn = "0132350882 9780306406157"),
+                last,
+            ),
+        )
 
-        assertThrows(IllegalArgumentException::class.java) { response.toBooks() }
+        val books = response.toBooks()
+
+        assertEquals(listOf(first.toBook(), last.toBook()), books)
+        verify(exactly = 3) { Log.d("BookMapper", match { it.contains("reason=missing_isbn") && it.contains("title=도서") }) }
+        verify(exactly = 2) { Log.d("BookMapper", match { it.contains("reason=invalid_isbn") }) }
+    }
+
+    @Test
+    fun `검색 결과의 모든 도서가 변환에 실패할 때_목록으로 변환하면_빈 목록을 반환한다`() {
+        val response = BookSearchResponse(
+            meta = BookSearchMeta(totalCount = 2, pageableCount = 2, isEnd = true),
+            documents = listOf(document().copy(isbn = null), document().copy(isbn = "")),
+        )
+
+        val books = response.toBooks()
+
+        assertEquals(emptyList<Book>(), books)
     }
 
     private fun document() = BookDocument(
