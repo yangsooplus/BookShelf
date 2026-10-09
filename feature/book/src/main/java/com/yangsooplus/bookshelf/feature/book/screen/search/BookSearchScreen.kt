@@ -16,23 +16,32 @@ import com.yangsooplus.bookshelf.feature.book.screen.search.component.BookSearch
 @Composable
 internal fun BookSearchScreen(
     onBookClick: (Book) -> Unit,
+    favoriteUpdate: Book? = null,
+    onFavoriteChanged: (Book) -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: BookSearchViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val currentOnBookClick by rememberUpdatedState(newValue = onBookClick)
+    val currentOnFavoriteChanged by rememberUpdatedState(newValue = onFavoriteChanged)
     val context = LocalContext.current
 
     LaunchedEffect(key1 = viewModel) {
         viewModel.effect.collect { effect ->
             when (effect) {
                 is BookSearchEffect.Navigation.OpenDetail -> currentOnBookClick(effect.book)
+                is BookSearchEffect.UpdateFavorite -> currentOnFavoriteChanged(effect.book)
                 is BookSearchEffect.ShowMessage -> Toast.makeText(context, effect.message, Toast.LENGTH_SHORT).show()
             }
         }
     }
     LaunchedEffect(key1 = viewModel) {
         viewModel.intent(intent = BookSearchIntent.EnterScreen)
+    }
+    LaunchedEffect(key1 = favoriteUpdate) {
+        favoriteUpdate?.let { updatedBook ->
+            viewModel.intent(intent = BookSearchIntent.UpdateFavorite(book = updatedBook))
+        }
     }
     BookSearchContent(
         query = state.query,

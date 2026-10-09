@@ -22,6 +22,13 @@ internal class BookNavigationState(
     var selectedTab by selectedTab
         private set
 
+    var favoriteUpdate by mutableStateOf<Book?>(value = null)
+        private set
+
+    fun updateFavorite(book: Book) {
+        favoriteUpdate = book
+    }
+
     val currentStack: NavBackStack<BookRoute>
         get() = when (selectedTab) {
             BookTab.Search -> searchStack

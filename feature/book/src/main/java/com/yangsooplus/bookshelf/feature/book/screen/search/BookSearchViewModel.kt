@@ -39,6 +39,9 @@ internal class BookSearchViewModel @Inject constructor(
                     emitEffect(effect = BookSearchEffect.Navigation.OpenDetail(book = book))
                 }
 
+                is BookSearchIntent.UpdateFavorite -> emitReducer(
+                    reducer = BookSearchReducer.UpdateFavorite(book = intent.book),
+                )
                 is BookSearchIntent.ToggleFavorite -> toggleFavorite(book = intent.book)
                 BookSearchIntent.OpenSortPanel -> emitReducer(reducer = BookSearchReducer.ShowSortPanel)
                 BookSearchIntent.CloseSortPanel -> emitReducer(reducer = BookSearchReducer.HideSortPanel)
@@ -140,9 +143,10 @@ internal class BookSearchViewModel @Inject constructor(
                 isFavorite = !book.isFavorite,
             )
         )) {
-            is SetFavoriteBookUseCase.Result.Success -> emitReducer(
-                reducer = BookSearchReducer.UpdateFavorite(book = result.book),
-            )
+            is SetFavoriteBookUseCase.Result.Success -> {
+                emitReducer(reducer = BookSearchReducer.UpdateFavorite(book = result.book))
+                emitEffect(effect = BookSearchEffect.UpdateFavorite(book = result.book))
+            }
 
             is SetFavoriteBookUseCase.Result.Fail -> emitEffect(
                 effect = BookSearchEffect.ShowMessage(message = "즐겨찾기를 변경하지 못했어요. 다시 시도해주세요."),

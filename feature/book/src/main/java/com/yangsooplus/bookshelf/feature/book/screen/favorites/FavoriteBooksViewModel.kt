@@ -120,6 +120,7 @@ internal class FavoriteBooksViewModel @Inject constructor(
                 emitReducer(reducer = FavoriteBooksReducer.RemoveBook(book = result.book))
                 getMetaData()
                 refreshBooks()
+                emitEffect(effect = FavoriteBooksEffect.UpdateFavorite(book = result.book))
             }
             is SetFavoriteBookUseCase.Result.Fail -> emitEffect(
                 effect = FavoriteBooksEffect.ShowMessage(message = "즐겨찾기를 해제하지 못했어요. 다시 시도해주세요."),

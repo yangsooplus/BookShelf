@@ -17,12 +17,15 @@ import com.yangsooplus.bookshelf.feature.book.screen.favorites.component.Favorit
 internal fun FavoriteBooksScreen(
     onBookClick: (Book) -> Unit,
     onSearchClick: () -> Unit,
+    favoriteUpdate: Book? = null,
+    onFavoriteChanged: (Book) -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: FavoriteBooksViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val currentOnBookClick by rememberUpdatedState(newValue = onBookClick)
     val currentOnSearchClick by rememberUpdatedState(newValue = onSearchClick)
+    val currentOnFavoriteChanged by rememberUpdatedState(newValue = onFavoriteChanged)
     val context = LocalContext.current
 
     LaunchedEffect(key1 = viewModel) {
@@ -30,11 +33,12 @@ internal fun FavoriteBooksScreen(
             when (effect) {
                 is FavoriteBooksEffect.Navigation.OpenDetail -> currentOnBookClick(effect.book)
                 FavoriteBooksEffect.Navigation.OpenSearch -> currentOnSearchClick()
+                is FavoriteBooksEffect.UpdateFavorite -> currentOnFavoriteChanged(effect.book)
                 is FavoriteBooksEffect.ShowMessage -> Toast.makeText(context, effect.message, Toast.LENGTH_SHORT).show()
             }
         }
     }
-    LaunchedEffect(key1 = viewModel) {
+    LaunchedEffect(key1 = viewModel, key2 = favoriteUpdate) {
         viewModel.intent(intent = FavoriteBooksIntent.EnterScreen)
     }
     FavoriteBooksContent(

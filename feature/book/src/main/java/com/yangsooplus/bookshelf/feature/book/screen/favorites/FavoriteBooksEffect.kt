@@ -8,5 +8,6 @@ internal sealed interface FavoriteBooksEffect : Effect {
         data class OpenDetail(val book: Book) : Navigation
         data object OpenSearch : Navigation
     }
+    data class UpdateFavorite(val book: Book) : FavoriteBooksEffect
     data class ShowMessage(val message: String) : FavoriteBooksEffect
 }

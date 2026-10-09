@@ -10,6 +10,7 @@ internal sealed interface BookSearchIntent : Intent {
     data class ChangeSort(val sort: BookSearchSort) : BookSearchIntent
     data class ClickBook(val book: Book) : BookSearchIntent
     data class ToggleFavorite(val book: Book) : BookSearchIntent
+    data class UpdateFavorite(val book: Book) : BookSearchIntent
     data object OpenSortPanel : BookSearchIntent
     data object CloseSortPanel : BookSearchIntent
     data object LoadMore : BookSearchIntent

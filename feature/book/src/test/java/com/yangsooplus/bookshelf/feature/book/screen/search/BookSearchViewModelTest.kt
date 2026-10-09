@@ -97,8 +97,7 @@ class BookSearchViewModelTest {
         viewModel.intent(intent = BookSearchIntent.ClickBook(book = book(id = "1")))
         runCurrent()
 
-        assertEquals(1, effects.size)
-        val effect = effects.single() as BookSearchEffect.Navigation.OpenDetail
+        val effect = effects.filterIsInstance<BookSearchEffect.Navigation.OpenDetail>().single()
         assertTrue(effect.book.isFavorite)
     }
 
