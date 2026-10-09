@@ -14,6 +14,5 @@ internal sealed interface BookSearchIntent : Intent {
     data object OpenSortPanel : BookSearchIntent
     data object CloseSortPanel : BookSearchIntent
     data object LoadMore : BookSearchIntent
-    data object EnterScreen : BookSearchIntent
     data object Retry : BookSearchIntent
 }

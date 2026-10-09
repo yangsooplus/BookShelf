@@ -46,7 +46,7 @@ internal class BookSearchViewModel @Inject constructor(
                 BookSearchIntent.OpenSortPanel -> emitReducer(reducer = BookSearchReducer.ShowSortPanel)
                 BookSearchIntent.CloseSortPanel -> emitReducer(reducer = BookSearchReducer.HideSortPanel)
                 BookSearchIntent.LoadMore -> loadMore()
-                BookSearchIntent.Retry, BookSearchIntent.EnterScreen -> withCurrentState { state ->
+                BookSearchIntent.Retry -> withCurrentState { state ->
                     if (state.searchedQuery.isNotBlank()) search(
                         query = state.searchedQuery,
                         sort = state.sort

@@ -43,6 +43,58 @@ class DefaultBookRepositoryTest {
     )
 
     @Test
+    fun `같은 검색 결과를 다시 요청할 때_즐겨찾기 상태가 변경되면_통신 없이 최신 DB 상태를 반영한다`() = runBlocking {
+        val document = fixture<BookDocument>().copy(isbn = "0132350882", datetime = null)
+        coEvery { api.searchBooks(query = "기록", sort = "accuracy", page = 1, size = 20) } returns BookSearchResponse(
+            meta = BookSearchMeta(totalCount = 1, pageableCount = 1, isEnd = true),
+            documents = listOf(document),
+        )
+        val first = repository.getBooks(query = " 기록 ", sort = "accuracy", page = 1, size = 20)
+        coEvery { dao.isFavorite(id = "9780132350884") } returns true
+
+        val cached = repository.getBooks(query = "기록", sort = "accuracy", page = 1, size = 20)
+
+        assertEquals(false, first.single().isFavorite)
+        assertEquals(first.single().copy(isFavorite = true), cached.single())
+        coVerify(exactly = 1) { api.searchBooks(query = "기록", sort = "accuracy", page = 1, size = 20) }
+        coVerify(exactly = 2) { dao.isFavorite(id = "9780132350884") }
+    }
+
+    @Test
+    fun `같은 검색어의 정렬과 페이지 및 크기가 다를 때_도서를 조회하면_요청별로 캐시를 구분한다`() = runBlocking {
+        val document = fixture<BookDocument>().copy(isbn = "0132350882", datetime = null)
+        coEvery { api.searchBooks(query = "기록", sort = any(), page = any(), size = any()) } returns BookSearchResponse(
+            meta = BookSearchMeta(totalCount = 100, pageableCount = 100, isEnd = false),
+            documents = listOf(document),
+        )
+
+        repository.getBooks(query = "기록", sort = "accuracy", page = 1, size = 20)
+        repository.getBooks(query = "기록", sort = "accuracy", page = 2, size = 20)
+        repository.getBooks(query = "기록", sort = "latest", page = 1, size = 20)
+        repository.getBooks(query = "기록", sort = "accuracy", page = 1, size = 50)
+        repository.getBooks(query = "기록", sort = "accuracy", page = 2, size = 20)
+
+        coVerify(exactly = 4) { api.searchBooks(query = "기록", sort = any(), page = any(), size = any()) }
+        coVerify(exactly = 1) { api.searchBooks(query = "기록", sort = "accuracy", page = 2, size = 20) }
+    }
+
+    @Test
+    fun `첫 통신이 실패했을 때_같은 검색을 다시 요청하면_실패는 캐시하지 않고 다시 통신한다`() = runBlocking {
+        val document = fixture<BookDocument>().copy(isbn = "0132350882", datetime = null)
+        coEvery { api.searchBooks(query = "기록", sort = "accuracy", page = 1, size = 20) } throws IOException("연결 실패")
+        expectFailure<IOException> { repository.getBooks(query = "기록", sort = "accuracy", page = 1, size = 20) }
+        coEvery { api.searchBooks(query = "기록", sort = "accuracy", page = 1, size = 20) } returns BookSearchResponse(
+            meta = BookSearchMeta(totalCount = 1, pageableCount = 1, isEnd = true),
+            documents = listOf(document),
+        )
+
+        val books = repository.getBooks(query = "기록", sort = "accuracy", page = 1, size = 20)
+
+        assertEquals(listOf(document.toBook()), books)
+        coVerify(exactly = 2) { api.searchBooks(query = "기록", sort = "accuracy", page = 1, size = 20) }
+    }
+
+    @Test
     fun `호출 스레드와 매핑 디스패처가 다를 때_검색과 즐겨찾기를 조회하면_모델 변환은 매핑 스레드에서 실행한다`() = runBlocking {
         val callerThread = Thread.currentThread()
         var searchMappingThread: Thread? = null

@@ -100,7 +100,10 @@ internal fun BookSearchContent(
                 BSSearchBar(
                     query = query,
                     onQueryChange = onQueryChange,
-                    onSearch = onSearch,
+                    onSearch = { query ->
+                        gridState.requestScrollToItem(index = 0)
+                        onSearch(query)
+                    },
                 )
             }
 
@@ -173,7 +176,10 @@ internal fun BookSearchContent(
         BookSearchSortPanel(
             sort = sort,
             onDismiss = onCloseSortPanel,
-            onApply = onSortChange,
+            onApply = { selectedSort ->
+                if (selectedSort != sort) gridState.requestScrollToItem(index = 0)
+                onSortChange(selectedSort)
+            },
         )
     }
 }

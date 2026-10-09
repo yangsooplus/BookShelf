@@ -1,5 +1,6 @@
 package com.yangsooplus.bookshelf.data.book.repository
 
+import com.yangsooplus.bookshelf.data.book.cache.ExpiringLruCache
 import com.yangsooplus.bookshelf.data.book.di.DefaultDispatcher
 import com.yangsooplus.bookshelf.data.book.mapper.toBook
 import com.yangsooplus.bookshelf.data.book.mapper.toBookOrNull
@@ -7,11 +8,13 @@ import com.yangsooplus.bookshelf.data.book.mapper.normalizeIsbn13
 import com.yangsooplus.bookshelf.data.book.mapper.toFavoriteBookEntity
 import com.yangsooplus.bookshelf.data.datasource.database.book.FavoriteBookDao
 import com.yangsooplus.bookshelf.data.datasource.network.book.BookApiService
+import com.yangsooplus.bookshelf.data.datasource.network.book.model.BookSearchResponse
 import com.yangsooplus.bookshelf.domain.book.exception.BookException
 import com.yangsooplus.bookshelf.domain.book.model.Book
 import com.yangsooplus.bookshelf.domain.book.model.FavoriteMetaData
 import com.yangsooplus.bookshelf.domain.book.repository.BookRepository
 import javax.inject.Inject
+import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
 
@@ -20,6 +23,8 @@ internal class DefaultBookRepository @Inject constructor(
     private val favoriteBookDao: FavoriteBookDao,
     @DefaultDispatcher private val defaultDispatcher: CoroutineDispatcher,
 ) : BookRepository {
+    private val searchCache = ExpiringLruCache<String, ConcurrentHashMap<SearchPageKey, BookSearchResponse>>()
+
     override suspend fun getBooks(query: String, sort: String, page: Int, size: Int): List<Book> {
         if (page !in 1..KAKAO_MAX_PAGE) {
             throw BookException.InvalidPage(message = "Kakao book search page must be between 1 and $KAKAO_MAX_PAGE")
@@ -27,12 +32,17 @@ internal class DefaultBookRepository @Inject constructor(
         if (size !in 1..KAKAO_MAX_PAGE_SIZE) {
             throw BookException.InvalidArgument(message = "Kakao book search size must be between 1 and $KAKAO_MAX_PAGE_SIZE")
         }
-        val response = bookApiService.searchBooks(
-            query = query,
-            sort = sort,
-            page = page,
-            size = size,
-        )
+        val normalizedQuery = query.trim()
+        val pageKey = SearchPageKey(sort = sort, page = page, size = size)
+        val response = searchCache.get(key = normalizedQuery)?.get(pageKey)
+            ?: bookApiService.searchBooks(
+                query = normalizedQuery,
+                sort = sort,
+                page = page,
+                size = size,
+            ).also { response ->
+                searchCache.getOrPut(key = normalizedQuery, createValue = { ConcurrentHashMap() })[pageKey] = response
+            }
         if (response.documents.isEmpty()) {
             if (response.meta.totalCount == 0) throw BookException.NoSearchResults()
             throw BookException.NoMoreBooks()
@@ -105,6 +115,8 @@ internal class DefaultBookRepository @Inject constructor(
             favoriteBookDao.deleteById(id = book.id)
         }
     }
+
+    private data class SearchPageKey(val sort: String, val page: Int, val size: Int)
 
     private companion object {
         const val KAKAO_MAX_PAGE = 50

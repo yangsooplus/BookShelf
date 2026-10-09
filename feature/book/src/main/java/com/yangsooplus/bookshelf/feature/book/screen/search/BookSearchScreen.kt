@@ -35,9 +35,6 @@ internal fun BookSearchScreen(
             }
         }
     }
-    LaunchedEffect(key1 = viewModel) {
-        viewModel.intent(intent = BookSearchIntent.EnterScreen)
-    }
     LaunchedEffect(key1 = favoriteUpdate) {
         favoriteUpdate?.let { updatedBook ->
             viewModel.intent(intent = BookSearchIntent.UpdateFavorite(book = updatedBook))
