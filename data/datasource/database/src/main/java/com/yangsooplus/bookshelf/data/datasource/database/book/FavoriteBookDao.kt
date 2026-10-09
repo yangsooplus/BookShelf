@@ -3,7 +3,6 @@ package com.yangsooplus.bookshelf.data.datasource.database.book
 import androidx.room.Dao
 import androidx.room.Query
 import androidx.room.Upsert
-import kotlinx.coroutines.flow.Flow
 
 @Dao
 abstract class FavoriteBookDao {
@@ -15,9 +14,6 @@ abstract class FavoriteBookDao {
 
     @Query("SELECT * FROM favorite_books WHERE id = :id")
     abstract suspend fun getById(id: String): FavoriteBookEntity?
-
-    @Query("SELECT id FROM favorite_books ORDER BY id")
-    abstract fun observeFavoriteBookIds(): Flow<List<String>>
 
     suspend fun getFavoriteBooks(
         query: String,

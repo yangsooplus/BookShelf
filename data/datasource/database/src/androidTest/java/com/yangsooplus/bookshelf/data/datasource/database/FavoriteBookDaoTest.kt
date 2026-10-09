@@ -8,11 +8,7 @@ import com.yangsooplus.bookshelf.data.datasource.database.book.FavoriteBookDao
 import com.yangsooplus.bookshelf.data.datasource.database.book.FavoriteBookEntity
 import java.time.LocalDate
 import java.util.UUID
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -114,23 +110,6 @@ class FavoriteBookDaoTest {
         assertEquals(all.take(2), find(limit = 2))
         assertEquals(all.drop(2).take(2), find(limit = 2, offset = 2))
         assertEquals(emptyList<FavoriteBookEntity>(), find(offset = 5))
-    }
-
-    @Test
-    fun observedIdsReflectSaveAndDelete() = runBlocking {
-        val emissions = Channel<List<String>>(Channel.UNLIMITED)
-        val observer = launch { dao.observeFavoriteBookIds().collect { emissions.send(it) } }
-        suspend fun next() = withTimeout(5000) { emissions.receive() }
-        try {
-            assertEquals(emptyList<String>(), next())
-            dao.upsert(book("1"))
-            assertEquals(listOf("1"), next())
-            dao.deleteById("1")
-            assertEquals(emptyList<String>(), next())
-        } finally {
-            observer.cancel()
-            emissions.close()
-        }
     }
 
     private suspend fun find(
