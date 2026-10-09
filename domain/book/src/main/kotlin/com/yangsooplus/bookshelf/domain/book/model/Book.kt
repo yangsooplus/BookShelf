@@ -14,6 +14,7 @@ data class Book(
     val thumbnailUrl: String,
     val isbn: String,
     val translators: List<String>,
+    val isFavorite: Boolean = false,
 )
 
 /**

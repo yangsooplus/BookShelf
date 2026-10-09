@@ -1,7 +1,8 @@
 package com.yangsooplus.bookshelf.data.book.repository
 
 import com.yangsooplus.bookshelf.data.book.mapper.toBook
-import com.yangsooplus.bookshelf.data.book.mapper.toBooks
+import com.yangsooplus.bookshelf.data.book.mapper.toBookOrNull
+import com.yangsooplus.bookshelf.data.book.mapper.normalizeIsbn13
 import com.yangsooplus.bookshelf.data.book.mapper.toFavoriteBookEntity
 import com.yangsooplus.bookshelf.data.datasource.database.book.FavoriteBookDao
 import com.yangsooplus.bookshelf.data.datasource.network.book.BookApiService
@@ -31,7 +32,14 @@ internal class DefaultBookRepository @Inject constructor(
             if (response.meta.totalCount == 0) throw BookException.NoSearchResults()
             throw BookException.NoMoreBooks()
         }
-        return response.toBooks()
+        return response.documents.mapNotNull { document ->
+            val id = try {
+                normalizeIsbn13(isbn = document.isbn.orEmpty())
+            } catch (_: IllegalArgumentException) {
+                return@mapNotNull document.toBookOrNull()
+            }
+            document.toBookOrNull(isFavorite = favoriteBookDao.isFavorite(id = id))
+        }
     }
 
     override suspend fun getFavoriteBooks(

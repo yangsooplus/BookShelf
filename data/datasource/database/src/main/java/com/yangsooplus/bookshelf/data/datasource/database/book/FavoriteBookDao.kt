@@ -15,6 +15,9 @@ abstract class FavoriteBookDao {
     @Query("SELECT * FROM favorite_books WHERE id = :id")
     abstract suspend fun getById(id: String): FavoriteBookEntity?
 
+    @Query("SELECT EXISTS(SELECT 1 FROM favorite_books WHERE id = :id)")
+    abstract suspend fun isFavorite(id: String): Boolean
+
     suspend fun getFavoriteBooks(
         query: String,
         ascending: Boolean,

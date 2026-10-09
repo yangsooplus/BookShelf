@@ -11,13 +11,13 @@ class SetFavoriteBookUseCase @Inject constructor(
         onFailure = { Result.Fail(it) },
     ) {
         bookRepository.setFavorite(book = args.book, isFavorite = args.isFavorite)
-        Result.Success
+        Result.Success(book = args.book.copy(isFavorite = args.isFavorite))
     }
 
     data class Param(val book: Book, val isFavorite: Boolean)
 
     sealed interface Result {
-        data object Success : Result
+        data class Success(val book: Book) : Result
         data class Fail(val cause: Exception) : Result
     }
 }

@@ -31,4 +31,5 @@ internal fun FavoriteBookEntity.toBook(): Book = Book(
     thumbnailUrl = thumbnailUrl,
     isbn = isbn,
     translators = translators.toList(),
+    isFavorite = true,
 )

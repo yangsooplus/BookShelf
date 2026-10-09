@@ -29,7 +29,9 @@ import org.junit.Test
 class DefaultBookRepositoryTest {
     private val fixture = kotlinFixture()
     private val api = mockk<BookApiService>()
-    private val dao = mockk<FavoriteBookDao>()
+    private val dao = mockk<FavoriteBookDao> {
+        coEvery { isFavorite(id = any()) } returns false
+    }
     private val repository = DefaultBookRepository(bookApiService = api, favoriteBookDao = dao)
 
     @Test
@@ -133,7 +135,7 @@ class DefaultBookRepositoryTest {
 
         val books = repository.getFavoriteBooks(query = "책", sort = "desc", minPrice = 0, maxPrice = 20000, page = 3, size = 100)
 
-        assertEquals(listOf(original), books)
+        assertEquals(listOf(original.copy(isFavorite = true)), books)
         coVerify(exactly = 0) { api.searchBooks(query = any(), sort = any(), page = any(), size = any()) }
     }
 
@@ -307,7 +309,39 @@ class DefaultBookRepositoryTest {
 
         val books = repository.getFavoriteBooks(query = "", sort = "asc", minPrice = null, maxPrice = null, page = 51, size = 100)
 
-        assertEquals(listOf(book), books)
+        assertEquals(listOf(book.copy(isFavorite = true)), books)
+    }
+
+    @Test
+    fun `다음 페이지에 저장한 도서가 있을 때_검색하면_DB 기준 즐겨찾기 여부를 채운다`() = runBlocking {
+        val saved = fixture<BookDocument>().copy(isbn = "0132350882", datetime = "2026-10-09T00:00:00.000+09:00")
+        val unsaved = saved.copy(isbn = "9780201633610")
+        val response = BookSearchResponse(
+            meta = BookSearchMeta(totalCount = 22, pageableCount = 22, isEnd = true),
+            documents = listOf(saved, unsaved),
+        )
+        coEvery { api.searchBooks(query = "책", sort = "accuracy", page = 2, size = 20) } returns response
+        coEvery { dao.isFavorite(id = saved.toBook().id) } returns true
+
+        val books = repository.getBooks(query = "책", sort = "accuracy", page = 2, size = 20)
+
+        assertEquals(listOf(saved.toBook().copy(isFavorite = true), unsaved.toBook().copy(isFavorite = false)), books)
+    }
+
+    @Test
+    fun `즐겨찾기 여부 조회가 실패했을 때_도서를 검색하면_오류를 전달한다`() = runBlocking {
+        val document = fixture<BookDocument>().copy(isbn = "0132350882", datetime = "2026-10-09T00:00:00.000+09:00")
+        val response = BookSearchResponse(
+            meta = BookSearchMeta(totalCount = 1, pageableCount = 1, isEnd = true),
+            documents = listOf(document),
+        )
+        val failure = IllegalStateException("database failed")
+        coEvery { api.searchBooks(query = "책", sort = "accuracy", page = 1, size = 20) } returns response
+        coEvery { dao.isFavorite(id = any()) } throws failure
+
+        val actual = expectFailure<IllegalStateException> { repository.getBooks(query = "책", sort = "accuracy", page = 1, size = 20) }
+
+        assertSame(failure, actual)
     }
 
     private suspend inline fun <reified T : Throwable> expectFailure(block: suspend () -> Unit): T {
