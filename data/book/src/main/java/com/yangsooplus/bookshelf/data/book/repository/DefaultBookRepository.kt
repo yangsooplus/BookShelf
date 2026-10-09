@@ -1,5 +1,6 @@
 package com.yangsooplus.bookshelf.data.book.repository
 
+import com.yangsooplus.bookshelf.data.book.di.DefaultDispatcher
 import com.yangsooplus.bookshelf.data.book.mapper.toBook
 import com.yangsooplus.bookshelf.data.book.mapper.toBookOrNull
 import com.yangsooplus.bookshelf.data.book.mapper.normalizeIsbn13
@@ -11,10 +12,13 @@ import com.yangsooplus.bookshelf.domain.book.model.Book
 import com.yangsooplus.bookshelf.domain.book.model.FavoriteMetaData
 import com.yangsooplus.bookshelf.domain.book.repository.BookRepository
 import javax.inject.Inject
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.withContext
 
 internal class DefaultBookRepository @Inject constructor(
     private val bookApiService: BookApiService,
     private val favoriteBookDao: FavoriteBookDao,
+    @DefaultDispatcher private val defaultDispatcher: CoroutineDispatcher,
 ) : BookRepository {
     override suspend fun getBooks(query: String, sort: String, page: Int, size: Int): List<Book> {
         if (page !in 1..KAKAO_MAX_PAGE) {
@@ -36,13 +40,15 @@ internal class DefaultBookRepository @Inject constructor(
         val isBeyondLastPage: Boolean = (page - 1) * size >= response.meta.pageableCount
         if (page > 1 && isBeyondLastPage) throw BookException.NoMoreBooks()
 
-        return response.documents.mapNotNull { document ->
-            val id = try {
-                normalizeIsbn13(isbn = document.isbn.orEmpty())
-            } catch (_: IllegalArgumentException) {
-                return@mapNotNull document.toBookOrNull()
+        return withContext(context = defaultDispatcher) {
+            response.documents.mapNotNull { document ->
+                val id = try {
+                    normalizeIsbn13(isbn = document.isbn.orEmpty())
+                } catch (_: IllegalArgumentException) {
+                    return@mapNotNull document.toBookOrNull()
+                }
+                document.toBookOrNull(isFavorite = favoriteBookDao.isFavorite(id = id))
             }
-            document.toBookOrNull(isFavorite = favoriteBookDao.isFavorite(id = id))
         }
     }
 
@@ -82,7 +88,9 @@ internal class DefaultBookRepository @Inject constructor(
             if (page == 1) throw BookException.NoSearchResults()
             throw BookException.NoMoreBooks()
         }
-        return books.map { it.toBook() }
+        return withContext(context = defaultDispatcher) {
+            books.map { it.toBook() }
+        }
     }
 
     override suspend fun getFavoriteMetaData(): FavoriteMetaData {

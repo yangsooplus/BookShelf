@@ -21,9 +21,13 @@ import io.mockk.coVerifySequence
 import io.mockk.mockk
 import java.io.IOException
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.asCoroutineDispatcher
+import java.util.concurrent.Executors
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertSame
+import org.junit.Assert.assertNotSame
 import org.junit.Test
 
 class DefaultBookRepositoryTest {
@@ -32,7 +36,49 @@ class DefaultBookRepositoryTest {
     private val dao = mockk<FavoriteBookDao> {
         coEvery { isFavorite(id = any()) } returns false
     }
-    private val repository = DefaultBookRepository(bookApiService = api, favoriteBookDao = dao)
+    private val repository = DefaultBookRepository(
+        bookApiService = api,
+        favoriteBookDao = dao,
+        defaultDispatcher = Dispatchers.Unconfined,
+    )
+
+    @Test
+    fun `호출 스레드와 매핑 디스패처가 다를 때_검색과 즐겨찾기를 조회하면_모델 변환은 매핑 스레드에서 실행한다`() = runBlocking {
+        val callerThread = Thread.currentThread()
+        var searchMappingThread: Thread? = null
+        var favoriteMappingThread: Thread? = null
+        val document = fixture<BookDocument>().copy(isbn = "0132350882", datetime = null)
+        coEvery { api.searchBooks(query = any(), sort = any(), page = any(), size = any()) } returns BookSearchResponse(
+            meta = BookSearchMeta(totalCount = 1, pageableCount = 1, isEnd = true),
+            documents = listOf(document),
+        )
+        coEvery { dao.isFavorite(id = any()) } coAnswers {
+            searchMappingThread = Thread.currentThread()
+            false
+        }
+        val authors = object : AbstractList<String>() {
+            override val size: Int = 1
+            override fun get(index: Int): String {
+                favoriteMappingThread = Thread.currentThread()
+                return "작가"
+            }
+        }
+        coEvery { dao.getFavoriteBooks(query = any(), ascending = any(), minPrice = any(), maxPrice = any(), limit = any(), offset = any()) } returns listOf(
+            document.toBook().toFavoriteBookEntity().copy(authors = authors),
+        )
+
+        Executors.newSingleThreadExecutor().asCoroutineDispatcher().use { dispatcher ->
+            val mappingRepository = DefaultBookRepository(bookApiService = api, favoriteBookDao = dao, defaultDispatcher = dispatcher)
+            val searchedBooks = mappingRepository.getBooks(query = "기록", sort = "accuracy", page = 1, size = 20)
+            val favoriteBooks = mappingRepository.getFavoriteBooks(query = "", sort = "asc", minPrice = null, maxPrice = null, page = 1, size = 100)
+
+            assertEquals("9780132350884", searchedBooks.single().id)
+            assertEquals(listOf("작가"), favoriteBooks.single().authors)
+            assertNotSame(callerThread, requireNotNull(searchMappingThread))
+            assertNotSame(callerThread, requireNotNull(favoriteMappingThread))
+            assertSame(searchMappingThread, favoriteMappingThread)
+        }
+    }
 
     @Test
     fun `검색 결과가 마지막 페이지에 있을 때_도서를 조회하면_요청 조건을 전달하고 도서를 반환한다`() = runBlocking {
