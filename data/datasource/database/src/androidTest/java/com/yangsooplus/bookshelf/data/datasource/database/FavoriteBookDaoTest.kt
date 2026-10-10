@@ -112,6 +112,29 @@ class FavoriteBookDaoTest {
         assertEquals(emptyList<FavoriteBookEntity>(), find(offset = 5))
     }
 
+    @Test
+    fun `정가 없이 판매가만 있는 도서가 있을 때_즐겨찾기 정보를 조회하면_판매가로 최대 가격을 계산한다`() = runBlocking {
+        dao.upsert(book = book(id = "sale-only").copy(regularPrice = -1, salePrice = 25_000))
+        dao.upsert(book = book(id = "unknown").copy(regularPrice = -1, salePrice = null))
+
+        val metaData = dao.getFavoriteMetaData()
+
+        assertEquals(2, metaData.totalCount)
+        assertEquals(25_000, metaData.maxPrice)
+        assertEquals(listOf("sale-only"), find(min = 0, max = metaData.maxPrice).map { it.id })
+    }
+
+    @Test
+    fun `정가와 판매가가 모두 있는 도서가 있을 때_즐겨찾기 정보를 조회하면_정가를 우선해 최대 가격을 계산한다`() = runBlocking {
+        dao.upsert(book = book(id = "regular").copy(regularPrice = 30_000, salePrice = 20_000))
+        dao.upsert(book = book(id = "sale-only").copy(regularPrice = -1, salePrice = 25_000))
+
+        val metaData = dao.getFavoriteMetaData()
+
+        assertEquals(2, metaData.totalCount)
+        assertEquals(30_000, metaData.maxPrice)
+    }
+
     private suspend fun find(
         query: String = "",
         ascending: Boolean = true,

@@ -20,7 +20,8 @@ abstract class FavoriteBookDao {
 
     @Query("""
         SELECT COUNT(*) AS totalCount,
-               MAX(CASE WHEN regular_price >= 0 THEN regular_price END) AS maxPrice
+               MAX(CASE WHEN regular_price >= 0 THEN regular_price
+                        WHEN sale_price >= 0 THEN sale_price END) AS maxPrice
         FROM favorite_books
     """)
     abstract suspend fun getFavoriteMetaData(): FavoriteBookMetaData
