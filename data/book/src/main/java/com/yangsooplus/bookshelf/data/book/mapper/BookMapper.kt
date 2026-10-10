@@ -11,8 +11,8 @@ import java.time.OffsetDateTime
 
 internal fun BookSearchResponse.toBooks(): List<Book> = documents.mapNotNull { it.toBookOrNull() }
 
-private fun BookDocument.toBookOrNull(): Book? = try {
-    toBook()
+internal fun BookDocument.toBookOrNull(isFavorite: Boolean = false): Book? = try {
+    toBook(isFavorite = isFavorite)
 } catch (failure: IllegalArgumentException) {
     logMappingFailure(reason = if (isbn.isNullOrBlank()) "missing_isbn" else "invalid_isbn", failure = failure)
     null
@@ -28,10 +28,11 @@ private fun BookDocument.logMappingFailure(reason: String, failure: Exception) {
     }
 }
 
-internal fun BookDocument.toBook(): Book {
+internal fun BookDocument.toBook(isFavorite: Boolean = false): Book {
     val originalIsbn = isbn.orEmpty()
+    val id = normalizeIsbn13(isbn = originalIsbn)
     return Book(
-        id = normalizeIsbn13(isbn = originalIsbn),
+        id = id,
         title = title.orEmpty(),
         contents = contents.orEmpty(),
         url = url.orEmpty(),
@@ -45,5 +46,6 @@ internal fun BookDocument.toBook(): Book {
         thumbnailUrl = thumbnail.orEmpty(),
         isbn = originalIsbn,
         translators = translators.orEmpty().toList(),
+        isFavorite = isFavorite,
     )
 }

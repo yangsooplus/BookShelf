@@ -15,6 +15,17 @@ abstract class FavoriteBookDao {
     @Query("SELECT * FROM favorite_books WHERE id = :id")
     abstract suspend fun getById(id: String): FavoriteBookEntity?
 
+    @Query("SELECT EXISTS(SELECT 1 FROM favorite_books WHERE id = :id)")
+    abstract suspend fun isFavorite(id: String): Boolean
+
+    @Query("""
+        SELECT COUNT(*) AS totalCount,
+               MAX(CASE WHEN regular_price >= 0 THEN regular_price
+                        WHEN sale_price >= 0 THEN sale_price END) AS maxPrice
+        FROM favorite_books
+    """)
+    abstract suspend fun getFavoriteMetaData(): FavoriteBookMetaData
+
     suspend fun getFavoriteBooks(
         query: String,
         ascending: Boolean,

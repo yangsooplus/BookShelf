@@ -10,7 +10,6 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.impl.annotations.MockK
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
@@ -45,7 +44,7 @@ class SetFavoriteBookUseCaseTest {
         for (isFavorite in listOf(true, false)) {
             val result = SUT.invoke(args = SetFavoriteBookUseCase.Param(book = book, isFavorite = isFavorite))
 
-            assertThat(result).isEqualTo(SetFavoriteBookUseCase.Result.Success)
+            assertThat(result).isEqualTo(SetFavoriteBookUseCase.Result.Success(book = book.copy(isFavorite = isFavorite)))
             coVerify(exactly = 1) { bookRepository.setFavorite(book = book, isFavorite = isFavorite) }
         }
     }

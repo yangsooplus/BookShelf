@@ -174,7 +174,7 @@ class BookMapperTest {
                 document().copy(isbn = ""),
                 document().copy(isbn = "   "),
                 document().copy(isbn = "9780132350885"),
-                document().copy(isbn = "0132350882 9780306406157"),
+                document().copy(isbn = "0132350882 9780306406158"),
                 last,
             ),
         )

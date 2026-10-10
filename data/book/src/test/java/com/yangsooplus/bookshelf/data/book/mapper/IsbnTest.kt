@@ -42,10 +42,21 @@ class IsbnTest {
     }
 
     @Test
-    fun `두 ISBN이 서로 다른 도서를 가리킬 때_정규화하면_오류를 전달한다`() {
+    fun `ISBN10과 979 ISBN13이 함께 제공될 때_정규화하면_응답의 ISBN13을 사용한다`() {
+        val isbn = "1141114712 9791141114718"
+
+        val id = normalizeIsbn13(isbn = isbn)
+
+        assertEquals("9791141114718", id)
+    }
+
+    @Test
+    fun `두 ISBN의 변환 결과가 다를 때_정규화하면_제공된 ISBN13을 우선한다`() {
         val isbn = "0132350882 9780306406157"
 
-        assertThrows(IllegalArgumentException::class.java) { normalizeIsbn13(isbn = isbn) }
+        val id = normalizeIsbn13(isbn = isbn)
+
+        assertEquals("9780306406157", id)
     }
 
     @Test

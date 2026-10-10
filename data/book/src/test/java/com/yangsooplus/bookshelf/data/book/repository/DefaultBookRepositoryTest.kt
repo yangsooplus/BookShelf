@@ -21,16 +21,116 @@ import io.mockk.coVerifySequence
 import io.mockk.mockk
 import java.io.IOException
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.asCoroutineDispatcher
+import java.util.concurrent.Executors
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertSame
+import org.junit.Assert.assertNotSame
 import org.junit.Test
 
 class DefaultBookRepositoryTest {
     private val fixture = kotlinFixture()
     private val api = mockk<BookApiService>()
-    private val dao = mockk<FavoriteBookDao>()
-    private val repository = DefaultBookRepository(bookApiService = api, favoriteBookDao = dao)
+    private val dao = mockk<FavoriteBookDao> {
+        coEvery { isFavorite(id = any()) } returns false
+    }
+    private val repository = DefaultBookRepository(
+        bookApiService = api,
+        favoriteBookDao = dao,
+        defaultDispatcher = Dispatchers.Unconfined,
+    )
+
+    @Test
+    fun `같은 검색 결과를 다시 요청할 때_즐겨찾기 상태가 변경되면_통신 없이 최신 DB 상태를 반영한다`() = runBlocking {
+        val document = fixture<BookDocument>().copy(isbn = "0132350882", datetime = null)
+        coEvery { api.searchBooks(query = "기록", sort = "accuracy", page = 1, size = 20) } returns BookSearchResponse(
+            meta = BookSearchMeta(totalCount = 1, pageableCount = 1, isEnd = true),
+            documents = listOf(document),
+        )
+        val first = repository.getBooks(query = " 기록 ", sort = "accuracy", page = 1, size = 20)
+        coEvery { dao.isFavorite(id = "9780132350884") } returns true
+
+        val cached = repository.getBooks(query = "기록", sort = "accuracy", page = 1, size = 20)
+
+        assertEquals(false, first.single().isFavorite)
+        assertEquals(first.single().copy(isFavorite = true), cached.single())
+        coVerify(exactly = 1) { api.searchBooks(query = "기록", sort = "accuracy", page = 1, size = 20) }
+        coVerify(exactly = 2) { dao.isFavorite(id = "9780132350884") }
+    }
+
+    @Test
+    fun `같은 검색어의 정렬과 페이지 및 크기가 다를 때_도서를 조회하면_요청별로 캐시를 구분한다`() = runBlocking {
+        val document = fixture<BookDocument>().copy(isbn = "0132350882", datetime = null)
+        coEvery { api.searchBooks(query = "기록", sort = any(), page = any(), size = any()) } returns BookSearchResponse(
+            meta = BookSearchMeta(totalCount = 100, pageableCount = 100, isEnd = false),
+            documents = listOf(document),
+        )
+
+        repository.getBooks(query = "기록", sort = "accuracy", page = 1, size = 20)
+        repository.getBooks(query = "기록", sort = "accuracy", page = 2, size = 20)
+        repository.getBooks(query = "기록", sort = "latest", page = 1, size = 20)
+        repository.getBooks(query = "기록", sort = "accuracy", page = 1, size = 50)
+        repository.getBooks(query = "기록", sort = "accuracy", page = 2, size = 20)
+
+        coVerify(exactly = 4) { api.searchBooks(query = "기록", sort = any(), page = any(), size = any()) }
+        coVerify(exactly = 1) { api.searchBooks(query = "기록", sort = "accuracy", page = 2, size = 20) }
+    }
+
+    @Test
+    fun `첫 통신이 실패했을 때_같은 검색을 다시 요청하면_실패는 캐시하지 않고 다시 통신한다`() = runBlocking {
+        val document = fixture<BookDocument>().copy(isbn = "0132350882", datetime = null)
+        coEvery { api.searchBooks(query = "기록", sort = "accuracy", page = 1, size = 20) } throws IOException("연결 실패")
+        expectFailure<IOException> { repository.getBooks(query = "기록", sort = "accuracy", page = 1, size = 20) }
+        coEvery { api.searchBooks(query = "기록", sort = "accuracy", page = 1, size = 20) } returns BookSearchResponse(
+            meta = BookSearchMeta(totalCount = 1, pageableCount = 1, isEnd = true),
+            documents = listOf(document),
+        )
+
+        val books = repository.getBooks(query = "기록", sort = "accuracy", page = 1, size = 20)
+
+        assertEquals(listOf(document.toBook()), books)
+        coVerify(exactly = 2) { api.searchBooks(query = "기록", sort = "accuracy", page = 1, size = 20) }
+    }
+
+    @Test
+    fun `호출 스레드와 매핑 디스패처가 다를 때_검색과 즐겨찾기를 조회하면_모델 변환은 매핑 스레드에서 실행한다`() = runBlocking {
+        val callerThread = Thread.currentThread()
+        var searchMappingThread: Thread? = null
+        var favoriteMappingThread: Thread? = null
+        val document = fixture<BookDocument>().copy(isbn = "0132350882", datetime = null)
+        coEvery { api.searchBooks(query = any(), sort = any(), page = any(), size = any()) } returns BookSearchResponse(
+            meta = BookSearchMeta(totalCount = 1, pageableCount = 1, isEnd = true),
+            documents = listOf(document),
+        )
+        coEvery { dao.isFavorite(id = any()) } coAnswers {
+            searchMappingThread = Thread.currentThread()
+            false
+        }
+        val authors = object : AbstractList<String>() {
+            override val size: Int = 1
+            override fun get(index: Int): String {
+                favoriteMappingThread = Thread.currentThread()
+                return "작가"
+            }
+        }
+        coEvery { dao.getFavoriteBooks(query = any(), ascending = any(), minPrice = any(), maxPrice = any(), limit = any(), offset = any()) } returns listOf(
+            document.toBook().toFavoriteBookEntity().copy(authors = authors),
+        )
+
+        Executors.newSingleThreadExecutor().asCoroutineDispatcher().use { dispatcher ->
+            val mappingRepository = DefaultBookRepository(bookApiService = api, favoriteBookDao = dao, defaultDispatcher = dispatcher)
+            val searchedBooks = mappingRepository.getBooks(query = "기록", sort = "accuracy", page = 1, size = 20)
+            val favoriteBooks = mappingRepository.getFavoriteBooks(query = "", sort = "asc", minPrice = null, maxPrice = null, page = 1, size = 100)
+
+            assertEquals("9780132350884", searchedBooks.single().id)
+            assertEquals(listOf("작가"), favoriteBooks.single().authors)
+            assertNotSame(callerThread, requireNotNull(searchMappingThread))
+            assertNotSame(callerThread, requireNotNull(favoriteMappingThread))
+            assertSame(searchMappingThread, favoriteMappingThread)
+        }
+    }
 
     @Test
     fun `검색 결과가 마지막 페이지에 있을 때_도서를 조회하면_요청 조건을 전달하고 도서를 반환한다`() = runBlocking {
@@ -67,7 +167,7 @@ class DefaultBookRepositoryTest {
     @Test
     fun `모든 응답 도서에 ISBN이 없을 때_도서를 조회하면_빈 목록을 반환한다`() = runBlocking<Unit> {
         val response = BookSearchResponse(
-            meta = BookSearchMeta(totalCount = 1, pageableCount = 1, isEnd = true),
+            meta = BookSearchMeta(totalCount = 21, pageableCount = 21, isEnd = true),
             documents = listOf(fixture<BookDocument>().copy(isbn = null)),
         )
         coEvery { api.searchBooks(query = "책", sort = "accuracy", page = 2, size = 20) } returns response
@@ -104,6 +204,22 @@ class DefaultBookRepositoryTest {
     }
 
     @Test
+    fun `마지막 페이지를 넘겨 같은 도서가 응답될 때_다음 페이지를 조회하면_NoMoreBooks를 전달한다`() = runBlocking<Unit> {
+        val document = fixture<BookDocument>().copy(isbn = "1141114712 9791141114718")
+        val response = BookSearchResponse(
+            meta = BookSearchMeta(totalCount = 74, pageableCount = 74, isEnd = true),
+            documents = listOf(document),
+        )
+        coEvery { api.searchBooks(query = "블루록", sort = "accuracy", page = 5, size = 20) } returns response
+
+        expectFailure<BookException.NoMoreBooks> {
+            repository.getBooks(query = "블루록", sort = "accuracy", page = 5, size = 20)
+        }
+
+        coVerify(exactly = 0) { dao.isFavorite(id = any()) }
+    }
+
+    @Test
     fun `통신이 실패할 때_도서를 조회하면_오류를 전달한다`() = runBlocking {
         val failure = IOException("connection failed")
         coEvery { api.searchBooks(query = any(), sort = any(), page = any(), size = any()) } throws failure
@@ -133,7 +249,7 @@ class DefaultBookRepositoryTest {
 
         val books = repository.getFavoriteBooks(query = "책", sort = "desc", minPrice = 0, maxPrice = 20000, page = 3, size = 100)
 
-        assertEquals(listOf(original), books)
+        assertEquals(listOf(original.copy(isFavorite = true)), books)
         coVerify(exactly = 0) { api.searchBooks(query = any(), sort = any(), page = any(), size = any()) }
     }
 
@@ -272,7 +388,7 @@ class DefaultBookRepositoryTest {
     @Test
     fun `카카오의 페이지와 조회 크기가 경계값일 때_도서를 조회하면_API에 요청을 전달한다`() = runBlocking {
         val document = fixture<BookDocument>().copy(isbn = "0132350882", datetime = "2026-10-09T00:00:00.000+09:00")
-        val response = BookSearchResponse(meta = BookSearchMeta(totalCount = 1000, pageableCount = 1000, isEnd = false), documents = listOf(document))
+        val response = BookSearchResponse(meta = BookSearchMeta(totalCount = 2500, pageableCount = 2500, isEnd = false), documents = listOf(document))
         coEvery { api.searchBooks(query = "책", sort = "accuracy", page = any(), size = any()) } returns response
         val requests = listOf(1 to 1, 1 to 50, 50 to 1, 50 to 50)
 
@@ -307,7 +423,39 @@ class DefaultBookRepositoryTest {
 
         val books = repository.getFavoriteBooks(query = "", sort = "asc", minPrice = null, maxPrice = null, page = 51, size = 100)
 
-        assertEquals(listOf(book), books)
+        assertEquals(listOf(book.copy(isFavorite = true)), books)
+    }
+
+    @Test
+    fun `다음 페이지에 저장한 도서가 있을 때_검색하면_DB 기준 즐겨찾기 여부를 채운다`() = runBlocking {
+        val saved = fixture<BookDocument>().copy(isbn = "0132350882", datetime = "2026-10-09T00:00:00.000+09:00")
+        val unsaved = saved.copy(isbn = "9780201633610")
+        val response = BookSearchResponse(
+            meta = BookSearchMeta(totalCount = 22, pageableCount = 22, isEnd = true),
+            documents = listOf(saved, unsaved),
+        )
+        coEvery { api.searchBooks(query = "책", sort = "accuracy", page = 2, size = 20) } returns response
+        coEvery { dao.isFavorite(id = saved.toBook().id) } returns true
+
+        val books = repository.getBooks(query = "책", sort = "accuracy", page = 2, size = 20)
+
+        assertEquals(listOf(saved.toBook().copy(isFavorite = true), unsaved.toBook().copy(isFavorite = false)), books)
+    }
+
+    @Test
+    fun `즐겨찾기 여부 조회가 실패했을 때_도서를 검색하면_오류를 전달한다`() = runBlocking {
+        val document = fixture<BookDocument>().copy(isbn = "0132350882", datetime = "2026-10-09T00:00:00.000+09:00")
+        val response = BookSearchResponse(
+            meta = BookSearchMeta(totalCount = 1, pageableCount = 1, isEnd = true),
+            documents = listOf(document),
+        )
+        val failure = IllegalStateException("database failed")
+        coEvery { api.searchBooks(query = "책", sort = "accuracy", page = 1, size = 20) } returns response
+        coEvery { dao.isFavorite(id = any()) } throws failure
+
+        val actual = expectFailure<IllegalStateException> { repository.getBooks(query = "책", sort = "accuracy", page = 1, size = 20) }
+
+        assertSame(failure, actual)
     }
 
     private suspend inline fun <reified T : Throwable> expectFailure(block: suspend () -> Unit): T {
